@@ -1,0 +1,99 @@
+[
+  {
+    "po_number": "4400042956-0",
+    "po_date": "2026-06-19",
+    "customer_code": "BMR",
+    "customer_name": "BMR HVAC LIMITED -VI",
+    "delivery_date": "2026-06-20",
+    "payment_terms": "45 Days",
+    "items": [
+      {
+        "item_code": "11009231",
+        "description": "FREEZER FRAME",
+        "part_code": null,
+        "quantity": 17000,
+        "uom": "NOS",
+        "rate": 76.53,
+        "total": 1301010.0,
+        "material_grade": null,
+        "colour": null
+      },
+      {
+        "item_code": "11031643",
+        "description": "NDC 215 EVA BACK COVER",
+        "part_code": "60272891A",
+        "quantity": 1100,
+        "uom": "NOS",
+        "rate": 22.27,
+        "total": 24497.0,
+        "material_grade": null,
+        "colour": null
+      }
+    ],
+    "total_amount": 1325507.0,
+    "gst": "AS APPLICABLE",
+    "parse_source": "fixture",
+    "source_file": "BMR_HVAC_PO_4400042956-0.pdf"
+  },
+  {
+    "po_number": "426RM0461",
+    "po_date": "2026-07-03",
+    "customer_code": "KENT",
+    "customer_name": "Kent RO Systems Ltd",
+    "delivery_date": null,
+    "payment_terms": "Cheque-45Days",
+    "items": [
+      {
+        "item_code": "602240",
+        "description": "POWP-TANK TRAY GRAND STAR",
+        "part_code": "602240",
+        "quantity": 12000,
+        "uom": "NOS",
+        "rate": 30.82,
+        "total": 369840.0,
+        "material_grade": "HIPS",
+        "colour": "NATURAL"
+      },
+      {
+        "item_code": "601351B",
+        "description": "POWP-TANK TRAY ZENITH RO",
+        "part_code": "601351B",
+        "quantity": 700,
+        "uom": "NOS",
+        "rate": 29.85,
+        "total": 20895.0,
+        "material_grade": null,
+        "colour": null
+      }
+    ],
+    "total_amount": 390735.0,
+    "gst": "CGST 9% + SGST 9%",
+    "parse_source": "fixture",
+    "source_file": "Kent_RO_PO_426RM0461.pdf"
+  },
+  {
+    "po_number": "000612",
+    "po_date": "2026-07-01",
+    "customer_code": "PREM",
+    "customer_name": "PREM INDUSTRIES INDIA LIMITED",
+    "delivery_date": "2026-07-08",
+    "payment_terms": "0 DAYS",
+    "items": [
+      {
+        "item_code": "84189900",
+        "description": "ADJUSTABLE LEG BOTTOM HINGE - UN-APPROVED",
+        "part_code": "22055843",
+        "quantity": 20000,
+        "uom": "NOS",
+        "rate": 4.24,
+        "total": 84800.0,
+        "material_grade": null,
+        "colour": null
+      }
+    ],
+    "total_amount": 84800.0,
+    "gst": "CGST 9% + SGST 9%",
+    "parse_source": "fixture",
+    "source_file": "Prem_Industries_PO_000612.pdf"
+  }
+]

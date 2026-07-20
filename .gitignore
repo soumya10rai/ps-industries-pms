@@ -37,3 +37,8 @@ next-env.d.ts
 # firebase
 serviceAccountKey.json
 *-firebase-adminsdk-*.json
+
+# Python PO parser venv
+.venv-po/
+__pycache__/
+*.pyc
