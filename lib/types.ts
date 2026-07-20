@@ -30,17 +30,15 @@ export const ROLE_HOME: Record<UserRole, string> = {
 };
 
 /**
- * Routes each role may access.
- * Admin can reach every dashboard; others are scoped to their area.
+ * Routes each role may access (middleware security perimeter).
+ * - /admin/**        — Admin only
+ * - /plant-head/**   — Plant Head only
+ * - /accountant/**   — Accountant & Admin
+ * - /store/**        — Store Manager & Admin
+ * - /production/**   — Production Head & Admin
  */
 export const ROLE_ACCESS: Record<UserRole, string[]> = {
-  admin: [
-    "/admin",
-    "/plant-head",
-    "/accountant",
-    "/store",
-    "/production",
-  ],
+  admin: ["/admin", "/accountant", "/store", "/production"],
   plant_head: ["/plant-head"],
   accountant: ["/accountant"],
   store_manager: ["/store"],
@@ -57,8 +55,13 @@ export const ALLOWED_EMAIL_DOMAINS = [
 ] as const;
 
 export const SESSION_COOKIE_NAME = "ps_session";
-export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
-export const SESSION_MAX_AGE_REMEMBER_SECONDS = 60 * 60 * 24 * 30; // 30 days
+/** Absolute session lifetime: 24 hours. */
+export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
+/**
+ * Sliding refresh: re-issue the JWT when fewer than this many seconds remain.
+ * Keeps active users signed in without extending past a fresh 24h window.
+ */
+export const SESSION_REFRESH_THRESHOLD_SECONDS = 60 * 60 * 6; // 6 hours
 
 export interface SessionPayload {
   uid: string;

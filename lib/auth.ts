@@ -51,9 +51,11 @@ export function getHomeForRole(role: UserRole | null): string {
 
 /**
  * Public paths that never require a session.
+ * /login and /register redirect to /auth/* aliases in middleware.
  */
 export function isPublicPath(pathname: string): boolean {
   const publicExact = [
+    "/",
     "/auth/login",
     "/auth/register",
     "/login",
@@ -65,7 +67,20 @@ export function isPublicPath(pathname: string): boolean {
 }
 
 /**
- * Map a dashboard path segment to the role that owns it.
+ * Whether the pathname is a role-gated dashboard (or nested under one).
+ */
+export function isProtectedDashboard(pathname: string): boolean {
+  return (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/plant-head") ||
+    pathname.startsWith("/accountant") ||
+    pathname.startsWith("/store") ||
+    pathname.startsWith("/production")
+  );
+}
+
+/**
+ * Map a dashboard path segment to the primary owner role.
  */
 export function roleForPath(pathname: string): UserRole | null {
   if (pathname === "/admin" || pathname.startsWith("/admin/")) return "admin";

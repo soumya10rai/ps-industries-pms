@@ -1,84 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
+import {
+  getHomeForRole,
+  isAuthorized,
+  isProtectedDashboard,
+  isPublicPath,
+} from "@/lib/auth";
 import {
   SESSION_COOKIE_NAME,
-  ROLE_HOME,
-  isUserRole,
-  type UserRole,
-} from "@/lib/types";
-
-const PUBLIC_PATHS = new Set([
-  "/auth/login",
-  "/auth/register",
-  "/login",
-  "/register",
-]);
-
-const PUBLIC_PREFIXES = ["/api/auth/", "/_next/", "/favicon.ico"];
-
-function getSecret(): Uint8Array | null {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret || secret.length < 32) return null;
-  return new TextEncoder().encode(secret);
-}
-
-async function readSession(
-  request: NextRequest
-): Promise<{ uid: string; role: UserRole; email: string } | null> {
-  const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return null;
-
-  const secret = getSecret();
-  if (!secret) return null;
-
-  try {
-    const { payload } = await jwtVerify(token, secret, {
-      algorithms: ["HS256"],
-    });
-    const uid = typeof payload.uid === "string" ? payload.uid : null;
-    const email = typeof payload.email === "string" ? payload.email : null;
-    const role = isUserRole(payload.role) ? payload.role : null;
-    if (!uid || !email || !role) return null;
-    return { uid, email, role };
-  } catch {
-    return null;
-  }
-}
-
-function isPublic(pathname: string): boolean {
-  if (PUBLIC_PATHS.has(pathname)) return true;
-  return PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
-}
-
-function canRoleAccess(role: UserRole, pathname: string): boolean {
-  if (role === "admin") {
-    return (
-      pathname.startsWith("/admin") ||
-      pathname.startsWith("/plant-head") ||
-      pathname.startsWith("/accountant") ||
-      pathname.startsWith("/store") ||
-      pathname.startsWith("/production") ||
-      pathname === "/"
-    );
-  }
-
-  const home = ROLE_HOME[role];
-  return (
-    pathname === home ||
-    pathname.startsWith(`${home}/`) ||
-    pathname === "/"
-  );
-}
+  clearSessionCookieOptions,
+  refreshSessionToken,
+  sessionCookieOptions,
+  verifySessionToken,
+} from "@/lib/session";
 
 /**
- * Protects all routes except /login, /register (and /auth/* aliases).
- * Unauthenticated users → /auth/login.
- * Authenticated users hitting login/register → their role home.
- * Wrong-role dashboard access → their own home.
+ * Security perimeter for PS Industries PMS.
+ *
+ * - Intercepts all matched requests
+ * - No / invalid session cookie → /auth/login (with ?next=)
+ * - Valid session but role not allowed for route → role home
+ * - Public: /, /login, /register, /auth/*, /api/auth/*
+ * - Sliding refresh when JWT is within the refresh threshold
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Static / asset short-circuit (matcher already excludes most)
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
@@ -87,7 +34,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Legacy redirects
+  // Legacy path aliases
   if (pathname === "/login") {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
@@ -95,19 +42,32 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth/register", request.url));
   }
 
-  const session = await readSession(request);
-  const publicRoute = isPublic(pathname);
+  const rawToken = request.cookies.get(SESSION_COOKIE_NAME)?.value ?? null;
+  const session = rawToken ? await verifySessionToken(rawToken) : null;
+  const publicRoute = isPublicPath(pathname);
 
+  // Unauthenticated
   if (!session) {
     if (publicRoute) {
+      // Drop a stale/invalid cookie if present
+      if (rawToken) {
+        const res = NextResponse.next();
+        res.cookies.set(SESSION_COOKIE_NAME, "", clearSessionCookieOptions());
+        return res;
+      }
       return NextResponse.next();
     }
+
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    const res = NextResponse.redirect(loginUrl);
+    if (rawToken) {
+      res.cookies.set(SESSION_COOKIE_NAME, "", clearSessionCookieOptions());
+    }
+    return res;
   }
 
-  // Signed-in users shouldn't stay on auth pages
+  // Authenticated users leave auth pages
   if (
     pathname === "/auth/login" ||
     pathname === "/auth/register" ||
@@ -115,42 +75,53 @@ export async function middleware(request: NextRequest) {
     pathname === "/register"
   ) {
     return NextResponse.redirect(
-      new URL(ROLE_HOME[session.role], request.url)
+      new URL(getHomeForRole(session.role), request.url)
     );
   }
 
-  // Root → role dashboard
+  // Landing → role home when signed in
   if (pathname === "/") {
     return NextResponse.redirect(
-      new URL(ROLE_HOME[session.role], request.url)
+      new URL(getHomeForRole(session.role), request.url)
     );
   }
 
-  // Role-gated dashboards
-  const isDashboard =
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/plant-head") ||
-    pathname.startsWith("/accountant") ||
-    pathname.startsWith("/store") ||
-    pathname.startsWith("/production");
-
-  if (isDashboard && !canRoleAccess(session.role, pathname)) {
+  // Role gate for dashboards
+  if (isProtectedDashboard(pathname) && !isAuthorized(session.role, pathname)) {
     return NextResponse.redirect(
-      new URL(ROLE_HOME[session.role], request.url)
+      new URL(getHomeForRole(session.role), request.url)
     );
   }
 
-  const response = NextResponse.next();
-  response.headers.set("x-user-role", session.role);
-  response.headers.set("x-user-email", session.email);
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-user-uid", session.uid);
+  requestHeaders.set("x-user-role", session.role);
+  requestHeaders.set("x-user-email", session.email);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+
+  // Sliding refresh (optional nice-to-have)
+  if (rawToken) {
+    const refreshed = await refreshSessionToken(rawToken);
+    if (refreshed) {
+      response.cookies.set(
+        SESSION_COOKIE_NAME,
+        refreshed.token,
+        sessionCookieOptions(refreshed.maxAge)
+      );
+    }
+  }
+
   return response;
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all paths except static assets.
+     * Match ALL paths except Next.js internals and common static assets.
      */
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

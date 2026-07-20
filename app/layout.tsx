@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { DM_Sans, Outfit } from "next/font/google";
-import { AuthNavbar } from "@/components/AuthNavbar";
-import { getServerSession } from "@/lib/server-auth";
 import "./globals.css";
 
 const dmSans = DM_Sans({
@@ -22,20 +20,17 @@ export const metadata: Metadata = {
     "Production management system for PS Industries — secure role-based access.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await getServerSession();
-
   return (
     <html lang="en">
       <body
         className={`${dmSans.variable} ${outfit.variable} font-sans antialiased`}
       >
-        <AuthNavbar user={user} />
-        <main>{children}</main>
+        {children}
       </body>
     </html>
   );

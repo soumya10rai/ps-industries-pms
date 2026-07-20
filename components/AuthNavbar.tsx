@@ -20,13 +20,10 @@ interface AuthNavbarProps {
   user: AuthUser | null;
 }
 
+/** Mirrors ROLE_ACCESS — plant-head is plant_head only; admin shares the others. */
 const NAV_LINKS: Array<{ href: string; label: string; roles: UserRole[] }> = [
   { href: "/admin", label: "Admin", roles: ["admin"] },
-  {
-    href: "/plant-head",
-    label: "Plant Head",
-    roles: ["admin", "plant_head"],
-  },
+  { href: "/plant-head", label: "Plant Head", roles: ["plant_head"] },
   {
     href: "/accountant",
     label: "Accountant",

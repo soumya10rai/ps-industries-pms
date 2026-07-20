@@ -4,22 +4,24 @@ import { getRole, getHomeForRole } from "@/lib/auth";
 import {
   createSessionToken,
   sessionCookieOptions,
+  clearSessionCookieOptions,
+  verifySessionToken,
+  refreshSessionToken,
   SESSION_COOKIE_NAME,
 } from "@/lib/session";
 import { isAllowedEmailDomain } from "@/lib/types";
 
 /**
  * POST /api/auth/session
- * Body: { idToken: string, rememberMe?: boolean }
+ * Body: { idToken: string }
  *
  * Verifies the Firebase ID token, loads role from Firestore /users/{uid},
- * and sets an httpOnly JWT session cookie.
+ * and sets an httpOnly JWT session cookie (24h, SameSite=Strict).
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const idToken = typeof body.idToken === "string" ? body.idToken : "";
-    const rememberMe = Boolean(body.rememberMe);
 
     if (!idToken) {
       return NextResponse.json(
@@ -76,7 +78,6 @@ export async function POST(request: NextRequest) {
         typeof userData.displayName === "string"
           ? userData.displayName
           : decoded.name,
-      rememberMe,
     });
 
     const cookie = sessionCookieOptions(maxAge);
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * GET /api/auth/session — return current session payload (for client layout).
+ * GET /api/auth/session — current session (+ optional sliding refresh).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -112,7 +113,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const { verifySessionToken } = await import("@/lib/session");
     const session = await verifySessionToken(token);
 
     if (!session) {
@@ -120,14 +120,11 @@ export async function GET(request: NextRequest) {
         { authenticated: false },
         { status: 401 }
       );
-      response.cookies.set(SESSION_COOKIE_NAME, "", {
-        ...sessionCookieOptions(0),
-        maxAge: 0,
-      });
+      response.cookies.set(SESSION_COOKIE_NAME, "", clearSessionCookieOptions());
       return response;
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       authenticated: true,
       user: {
         uid: session.uid,
@@ -136,7 +133,19 @@ export async function GET(request: NextRequest) {
         displayName: session.name ?? "",
       },
       redirectTo: getHomeForRole(session.role),
+      expiresAt: session.exp,
     });
+
+    const refreshed = await refreshSessionToken(token);
+    if (refreshed) {
+      response.cookies.set(
+        SESSION_COOKIE_NAME,
+        refreshed.token,
+        sessionCookieOptions(refreshed.maxAge)
+      );
+    }
+
+    return response;
   } catch (error) {
     console.error("[session:get]", error);
     return NextResponse.json({ authenticated: false }, { status: 401 });

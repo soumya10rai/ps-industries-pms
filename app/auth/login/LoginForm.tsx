@@ -10,7 +10,7 @@ import {
 } from "@/lib/firebase";
 import { isAllowedEmailDomain, ALLOWED_EMAIL_DOMAINS } from "@/lib/types";
 
-async function establishSession(rememberMe: boolean) {
+async function establishSession() {
   const user = getFirebaseAuth().currentUser;
   if (!user) {
     throw new Error("No authenticated user.");
@@ -19,7 +19,7 @@ async function establishSession(rememberMe: boolean) {
   const res = await fetch("/api/auth/session", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ idToken, rememberMe }),
+    body: JSON.stringify({ idToken }),
   });
   const data = await res.json();
   if (!res.ok) {
@@ -35,7 +35,6 @@ export default function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -60,7 +59,7 @@ export default function LoginForm() {
     setLoading(true);
     try {
       await signIn(normalized, password);
-      const session = await establishSession(rememberMe);
+      const session = await establishSession();
       router.push(
         nextPath && nextPath.startsWith("/") ? nextPath : session.redirectTo
       );
@@ -79,7 +78,7 @@ export default function LoginForm() {
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-      const session = await establishSession(rememberMe);
+      const session = await establishSession();
       router.push(
         nextPath && nextPath.startsWith("/") ? nextPath : session.redirectTo
       );
@@ -149,15 +148,9 @@ export default function LoginForm() {
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-steel-600">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="h-4 w-4 rounded border-steel-300 text-brand-700 focus:ring-brand-500"
-            />
-            Remember me for 30 days
-          </label>
+          <p className="text-xs text-steel-500">
+            Sessions expire after 24 hours for security.
+          </p>
 
           <button type="submit" className="btn-primary" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
