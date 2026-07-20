@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && userDoc().keys().hasAny(['role'])
+        && userDoc().role == 'admin'
+        && userDoc().approved == true;
+    }
+
+    // /users/{uid} — role field is the authorization source of truth
+    match /users/{uid} {
+      // Users can read their own profile; admins can read all
+      allow read: if isSelf(uid) || isAdmin();
+
+      // New users may create their own profile without a privileged role
+      allow create: if isSelf(uid)
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.role == null
+        && request.resource.data.approved == false;
+
+      // Only admins may change role / approved (or use Admin SDK / seed API)
+      allow update: if isAdmin()
+        || (isSelf(uid)
+            && !request.resource.data.diff(resource.data).affectedKeys()
+                .hasAny(['role', 'approved']));
+
+      allow delete: if isAdmin();
+    }
+  }
+}
