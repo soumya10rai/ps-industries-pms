@@ -40,7 +40,7 @@ export const MOCK_POS: PurchaseOrder[] = [
     ],
     total_amount: 1325507,
     gst: "AS APPLICABLE",
-    status: "pending",
+    status: "new",
     parse_source: "fixture",
     source_file: "BMR_HVAC_PO_4400042956-0.pdf",
     uploaded_by: "accountant@psindustries.in",

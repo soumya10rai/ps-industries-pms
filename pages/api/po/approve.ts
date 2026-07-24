@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { findPO, upsertPO } from "@/lib/mock-data";
-import type { PurchaseOrder } from "@/lib/types";
+import { isAwaitingApproval, type PurchaseOrder } from "@/lib/types";
 
 async function loadPO(id: string): Promise<PurchaseOrder | null> {
   const memory = findPO(id);
@@ -11,7 +11,6 @@ async function loadPO(id: string): Promise<PurchaseOrder | null> {
   const db = getAdminDb();
   const snap = await db.collection("po_uploads").doc(id).get();
   if (!snap.exists) {
-    // Also allow lookup by po_number
     const byNumber = await db
       .collection("po_uploads")
       .where("po_number", "==", id)
@@ -26,7 +25,8 @@ async function loadPO(id: string): Promise<PurchaseOrder | null> {
 
 /**
  * POST /api/po/approve
- * Marks a purchase order as approved (Plant Head) in Firestore + memory.
+ * Body: { id, notes? }
+ * Updates Firestore po_uploads: status → approved, approved_by, approved_at.
  */
 export default async function handler(
   req: NextApiRequest,
@@ -38,7 +38,7 @@ export default async function handler(
   }
 
   try {
-    const { id } = req.body as { id?: string };
+    const { id, notes } = req.body as { id?: string; notes?: string };
     if (!id) {
       return res.status(400).json({ error: "Missing PO id." });
     }
@@ -48,19 +48,22 @@ export default async function handler(
       return res.status(404).json({ error: "Purchase order not found." });
     }
 
-    if (existing.status !== "pending" && existing.status !== "rejected") {
+    if (!isAwaitingApproval(existing.status) && existing.status !== "rejected") {
       return res.status(400).json({
         error: `Cannot approve a PO with status "${existing.status}".`,
       });
     }
 
+    const approvedBy = String(
+      req.headers["x-user-email"] || "plant@psindustries.in"
+    );
+    const approvedAt = new Date().toISOString();
+
     const approved: PurchaseOrder = {
       ...existing,
       status: "approved",
-      approved_by: String(
-        req.headers["x-user-email"] || "plant@psindustries.in"
-      ),
-      approved_at: new Date().toISOString(),
+      approved_by: approvedBy,
+      approved_at: approvedAt,
       rejection_reason: undefined,
     };
 
@@ -70,6 +73,7 @@ export default async function handler(
       .set(
         {
           ...approved,
+          notes: notes || null,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
@@ -77,7 +81,11 @@ export default async function handler(
 
     upsertPO(approved);
 
-    return res.status(200).json({ po: approved, message: "PO approved." });
+    return res.status(200).json({
+      ok: true,
+      po: approved,
+      message: "PO Approved",
+    });
   } catch (err) {
     console.error("[po/approve]", err);
     const message = err instanceof Error ? err.message : "Approve failed";

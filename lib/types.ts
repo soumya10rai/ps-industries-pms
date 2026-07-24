@@ -57,12 +57,18 @@ export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 export const SESSION_REFRESH_THRESHOLD_SECONDS = 60 * 60 * 6;
 
 export type POStatus =
+  | "new"
   | "pending"
   | "approved"
   | "rejected"
   | "in_production"
   | "completed"
   | "material_check";
+
+/** Statuses that await Plant Head action. */
+export function isAwaitingApproval(status: string | undefined): boolean {
+  return status === "new" || status === "pending";
+}
 
 export interface SessionPayload {
   uid: string;

@@ -35,7 +35,7 @@ export default async function handler(
     const saved: PurchaseOrder = {
       ...po,
       id: docId,
-      status: po.status || "pending",
+      status: po.status || "new",
       uploaded_by: uploadedBy,
       uploaded_at: po.uploaded_at || nowIso,
       parse_source: po.parse_source || "upload",

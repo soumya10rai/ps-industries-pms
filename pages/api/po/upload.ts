@@ -35,7 +35,7 @@ function buildPreview(fileName: string): PurchaseOrder {
     return {
       ...matched,
       id: `po_${matched.customer_code.toLowerCase()}_${stamp}`,
-      status: "pending",
+      status: "new",
       parse_source: "upload",
       source_file: fileName,
       uploaded_at: new Date().toISOString(),
@@ -68,7 +68,7 @@ function buildPreview(fileName: string): PurchaseOrder {
     ],
     total_amount: 10000,
     gst: "CGST 9% + SGST 9%",
-    status: "pending",
+    status: "new",
     parse_source: "upload",
     source_file: fileName,
     uploaded_at: new Date().toISOString(),

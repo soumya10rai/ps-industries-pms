@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
 import { findPO, upsertPO } from "@/lib/mock-data";
-import type { PurchaseOrder } from "@/lib/types";
+import { isAwaitingApproval, type PurchaseOrder } from "@/lib/types";
 
 async function loadPO(id: string): Promise<PurchaseOrder | null> {
   const memory = findPO(id);
@@ -25,7 +25,8 @@ async function loadPO(id: string): Promise<PurchaseOrder | null> {
 
 /**
  * POST /api/po/reject
- * Marks a purchase order as rejected in Firestore + memory.
+ * Body: { id, reason | notes } — notes/reason required.
+ * Updates Firestore po_uploads: status → rejected.
  */
 export default async function handler(
   req: NextApiRequest,
@@ -37,9 +38,21 @@ export default async function handler(
   }
 
   try {
-    const { id, reason } = req.body as { id?: string; reason?: string };
+    const body = req.body as {
+      id?: string;
+      reason?: string;
+      notes?: string;
+    };
+    const { id } = body;
+    const reason = String(body.reason || body.notes || "").trim();
+
     if (!id) {
       return res.status(400).json({ error: "Missing PO id." });
+    }
+    if (!reason) {
+      return res.status(400).json({
+        error: "Notes are required to reject a purchase order.",
+      });
     }
 
     const existing = await loadPO(id);
@@ -47,7 +60,7 @@ export default async function handler(
       return res.status(404).json({ error: "Purchase order not found." });
     }
 
-    if (existing.status !== "pending") {
+    if (!isAwaitingApproval(existing.status)) {
       return res.status(400).json({
         error: `Cannot reject a PO with status "${existing.status}".`,
       });
@@ -56,7 +69,7 @@ export default async function handler(
     const rejected: PurchaseOrder = {
       ...existing,
       status: "rejected",
-      rejection_reason: reason || "Rejected by Plant Head",
+      rejection_reason: reason,
       approved_by: String(
         req.headers["x-user-email"] || "plant@psindustries.in"
       ),
@@ -69,6 +82,7 @@ export default async function handler(
       .set(
         {
           ...rejected,
+          notes: reason,
           updatedAt: FieldValue.serverTimestamp(),
         },
         { merge: true }
@@ -76,7 +90,11 @@ export default async function handler(
 
     upsertPO(rejected);
 
-    return res.status(200).json({ po: rejected, message: "PO rejected." });
+    return res.status(200).json({
+      ok: true,
+      po: rejected,
+      message: "PO Rejected",
+    });
   } catch (err) {
     console.error("[po/reject]", err);
     const message = err instanceof Error ? err.message : "Reject failed";
