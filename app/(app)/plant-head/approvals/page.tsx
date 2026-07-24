@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import POPreviewModal from "@/components/POPreviewModal";
 import Toast from "@/components/Toast";
 import Button from "@/components/Button";
+import { useAuth } from "@/lib/auth-context";
 import {
   formatINR,
   isAwaitingApproval,
@@ -12,12 +13,15 @@ import {
 } from "@/lib/types";
 
 export default function ApprovalsPage() {
+  const { user, profile } = useAuth();
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<PurchaseOrder | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+
+  const currentUid = user?.uid || profile?.uid || "";
 
   const loadPending = useCallback(async () => {
     setLoading(true);
@@ -28,10 +32,15 @@ export default function ApprovalsPage() {
       if (!res.ok) {
         throw new Error(data.error || "Failed to load pending POs.");
       }
-      const list = Array.isArray(data.orders) ? (data.orders as PurchaseOrder[]) : [];
+      const list = Array.isArray(data.orders)
+        ? (data.orders as PurchaseOrder[])
+        : [];
+      // Only show POs that still await approval (from Firestore)
       setOrders(list.filter((po) => isAwaitingApproval(po.status)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load approvals.");
+      setError(
+        err instanceof Error ? err.message : "Failed to load approvals."
+      );
     } finally {
       setLoading(false);
     }
@@ -41,28 +50,30 @@ export default function ApprovalsPage() {
     void loadPending();
   }, [loadPending]);
 
-  function removeFromList(id: string) {
-    setOrders((prev) => prev.filter((po) => po.id !== id));
-    setSelected(null);
-  }
-
   async function handleApprove(notes: string) {
     if (!selected) return;
     setBusy(true);
     setError(null);
+    const poId = selected.id;
     try {
       const res = await fetch("/api/po/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: selected.id,
+          po_id: poId,
+          approved_by: currentUid,
           notes: notes || undefined,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Approve failed");
-      removeFromList(selected.id);
+      if (!res.ok) {
+        throw new Error(data.error || "Approve failed");
+      }
+
+      setSelected(null);
       setToast("PO Approved");
+      // Refresh from Firestore so the card stays gone after reload
+      await loadPending();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Approve failed");
     } finally {
@@ -72,22 +83,32 @@ export default function ApprovalsPage() {
 
   async function handleReject(notes: string) {
     if (!selected) return;
+    if (!notes.trim()) {
+      setError("Notes are required to reject a purchase order.");
+      return;
+    }
+
     setBusy(true);
     setError(null);
+    const poId = selected.id;
     try {
       const res = await fetch("/api/po/reject", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: selected.id,
-          reason: notes,
-          notes,
+          po_id: poId,
+          rejection_reason: notes.trim(),
+          approved_by: currentUid,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Reject failed");
-      removeFromList(selected.id);
+      if (!res.ok) {
+        throw new Error(data.error || "Reject failed");
+      }
+
+      setSelected(null);
       setToast("PO Rejected");
+      await loadPending();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {
@@ -129,7 +150,8 @@ export default function ApprovalsPage() {
             No pending approvals
           </p>
           <p className="mt-2 text-sm text-ps-gray-500">
-            New POs uploaded by Accounting will appear here for Plant Head review.
+            New POs uploaded by Accounting will appear here for Plant Head
+            review.
           </p>
         </div>
       ) : (

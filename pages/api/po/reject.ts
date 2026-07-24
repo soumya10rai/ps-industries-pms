@@ -1,33 +1,20 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { stripUndefined } from "@/lib/firestore-utils";
-import { findPO, upsertPO } from "@/lib/mock-data";
-import { isAwaitingApproval, type PurchaseOrder } from "@/lib/types";
-
-async function loadPO(id: string): Promise<PurchaseOrder | null> {
-  const memory = findPO(id);
-  if (memory) return memory;
-
-  const db = getAdminDb();
-  const snap = await db.collection("po_uploads").doc(id).get();
-  if (!snap.exists) {
-    const byNumber = await db
-      .collection("po_uploads")
-      .where("po_number", "==", id)
-      .limit(1)
-      .get();
-    if (byNumber.empty) return null;
-    const doc = byNumber.docs[0]!;
-    return { id: doc.id, ...(doc.data() as Omit<PurchaseOrder, "id">) };
-  }
-  return { id: snap.id, ...(snap.data() as Omit<PurchaseOrder, "id">) };
-}
+import {
+  FieldValue,
+  loadPOFromFirestore,
+  resolveActor,
+} from "@/lib/po-firestore";
+import { upsertPO } from "@/lib/mock-data";
+import { isAwaitingApproval } from "@/lib/types";
 
 /**
  * POST /api/po/reject
- * Body: { id, reason | notes } — notes/reason required.
- * Updates Firestore po_uploads: status → rejected.
+ * Body: { po_id | id, rejection_reason | reason | notes }
+ *
+ * Updates Firestore /po_uploads/{po_id}:
+ *   status → "rejected"
+ *   rejection_reason → notes text
  */
 export default async function handler(
   req: NextApiRequest,
@@ -39,16 +26,22 @@ export default async function handler(
   }
 
   try {
-    const body = req.body as {
+    const body = (req.body ?? {}) as {
+      po_id?: string;
       id?: string;
+      rejection_reason?: string;
       reason?: string;
       notes?: string;
+      approved_by?: string;
     };
-    const { id } = body;
-    const reason = String(body.reason || body.notes || "").trim();
 
-    if (!id) {
-      return res.status(400).json({ error: "Missing PO id." });
+    const poId = String(body.po_id || body.id || "").trim();
+    const reason = String(
+      body.rejection_reason || body.reason || body.notes || ""
+    ).trim();
+
+    if (!poId) {
+      return res.status(400).json({ error: "Missing po_id." });
     }
     if (!reason) {
       return res.status(400).json({
@@ -56,9 +49,11 @@ export default async function handler(
       });
     }
 
-    const existing = await loadPO(id);
+    const existing = await loadPOFromFirestore(poId);
     if (!existing) {
-      return res.status(404).json({ error: "Purchase order not found." });
+      return res.status(404).json({
+        error: `Purchase order not found in Firestore for id "${poId}".`,
+      });
     }
 
     if (!isAwaitingApproval(existing.status)) {
@@ -67,33 +62,37 @@ export default async function handler(
       });
     }
 
-    const rejected: PurchaseOrder = {
-      ...existing,
-      status: "rejected",
-      rejection_reason: reason,
-      approved_by: String(
-        req.headers["x-user-email"] || "plant@psindustries.in"
-      ),
-      approved_at: new Date().toISOString(),
-    };
+    const actor = resolveActor(
+      { body: body as Record<string, unknown>, headers: req.headers },
+      "unknown"
+    );
 
     await getAdminDb()
       .collection("po_uploads")
-      .doc(rejected.id)
-      .set(
-        stripUndefined({
-          ...rejected,
-          notes: reason,
-          updatedAt: FieldValue.serverTimestamp(),
-        }),
-        { merge: true }
-      );
+      .doc(existing.id)
+      .update({
+        status: "rejected",
+        rejection_reason: reason,
+        notes: reason,
+        rejected_by: actor.uid,
+        approved_by: actor.uid,
+        approved_at: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
+    const rejected = {
+      ...existing,
+      status: "rejected" as const,
+      rejection_reason: reason,
+      approved_by: actor.uid,
+      approved_at: new Date().toISOString(),
+    };
     upsertPO(rejected);
 
     return res.status(200).json({
       ok: true,
       po: rejected,
+      firestorePath: `po_uploads/${existing.id}`,
       message: "PO Rejected",
     });
   } catch (err) {

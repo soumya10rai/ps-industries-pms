@@ -1,33 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
-import { stripUndefined } from "@/lib/firestore-utils";
-import { findPO, upsertPO } from "@/lib/mock-data";
-import { isAwaitingApproval, type PurchaseOrder } from "@/lib/types";
-
-async function loadPO(id: string): Promise<PurchaseOrder | null> {
-  const memory = findPO(id);
-  if (memory) return memory;
-
-  const db = getAdminDb();
-  const snap = await db.collection("po_uploads").doc(id).get();
-  if (!snap.exists) {
-    const byNumber = await db
-      .collection("po_uploads")
-      .where("po_number", "==", id)
-      .limit(1)
-      .get();
-    if (byNumber.empty) return null;
-    const doc = byNumber.docs[0]!;
-    return { id: doc.id, ...(doc.data() as Omit<PurchaseOrder, "id">) };
-  }
-  return { id: snap.id, ...(snap.data() as Omit<PurchaseOrder, "id">) };
-}
+import {
+  FieldValue,
+  loadPOFromFirestore,
+  resolveActor,
+} from "@/lib/po-firestore";
+import { upsertPO } from "@/lib/mock-data";
+import { isAwaitingApproval } from "@/lib/types";
 
 /**
  * POST /api/po/approve
- * Body: { id, notes? }
- * Updates Firestore po_uploads: status → approved, approved_by, approved_at.
+ * Body: { po_id | id, approved_by?: uid, notes? }
+ *
+ * Updates Firestore /po_uploads/{po_id}:
+ *   status → "approved"
+ *   approved_by → user UID
+ *   approved_at → server timestamp
  */
 export default async function handler(
   req: NextApiRequest,
@@ -39,14 +27,23 @@ export default async function handler(
   }
 
   try {
-    const { id, notes } = req.body as { id?: string; notes?: string };
-    if (!id) {
-      return res.status(400).json({ error: "Missing PO id." });
+    const body = (req.body ?? {}) as {
+      po_id?: string;
+      id?: string;
+      approved_by?: string;
+      notes?: string;
+    };
+
+    const poId = String(body.po_id || body.id || "").trim();
+    if (!poId) {
+      return res.status(400).json({ error: "Missing po_id." });
     }
 
-    const existing = await loadPO(id);
+    const existing = await loadPOFromFirestore(poId);
     if (!existing) {
-      return res.status(404).json({ error: "Purchase order not found." });
+      return res.status(404).json({
+        error: `Purchase order not found in Firestore for id "${poId}".`,
+      });
     }
 
     if (!isAwaitingApproval(existing.status) && existing.status !== "rejected") {
@@ -55,38 +52,39 @@ export default async function handler(
       });
     }
 
-    const approvedBy = String(
-      req.headers["x-user-email"] || "plant@psindustries.in"
+    const actor = resolveActor(
+      { body: body as Record<string, unknown>, headers: req.headers },
+      "unknown"
     );
-    const approvedAt = new Date().toISOString();
 
-    const { rejection_reason: _omit, ...rest } = existing;
-    const approved: PurchaseOrder = {
-      ...rest,
-      status: "approved",
-      approved_by: approvedBy,
-      approved_at: approvedAt,
-    };
+    const notes = String(body.notes || "").trim();
 
     await getAdminDb()
       .collection("po_uploads")
-      .doc(approved.id)
-      .set(
-        stripUndefined({
-          ...approved,
-          notes: notes?.trim() ? notes.trim() : null,
-          // Clear any previous rejection reason in Firestore
-          rejection_reason: FieldValue.delete(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }),
-        { merge: true }
-      );
+      .doc(existing.id)
+      .update({
+        status: "approved",
+        approved_by: actor.uid,
+        approved_by_email: actor.email || null,
+        approved_at: FieldValue.serverTimestamp(),
+        rejection_reason: FieldValue.delete(),
+        notes: notes || null,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
+    const approved = {
+      ...existing,
+      status: "approved" as const,
+      approved_by: actor.uid,
+      approved_at: new Date().toISOString(),
+      rejection_reason: undefined,
+    };
     upsertPO(approved);
 
     return res.status(200).json({
       ok: true,
       po: approved,
+      firestorePath: `po_uploads/${existing.id}`,
       message: "PO Approved",
     });
   } catch (err) {
