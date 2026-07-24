@@ -1,6 +1,13 @@
 import { cookies } from "next/headers";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/session";
-import type { AuthUser } from "@/components/AuthNavbar";
+import type { UserRole } from "@/lib/types";
+
+export interface AuthUser {
+  uid: string;
+  email: string;
+  role: UserRole;
+  displayName: string;
+}
 
 /**
  * Server-side session reader for layouts and RSC pages.
@@ -19,7 +26,6 @@ export async function getServerSession(): Promise<AuthUser | null> {
       displayName: session.name ?? "",
     };
   } catch {
-    // Missing SESSION_SECRET during build, or invalid cookie
     return null;
   }
 }

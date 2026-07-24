@@ -58,7 +58,6 @@ export default function RegisterPage() {
 
     const normalized = email.trim().toLowerCase();
 
-    // Security boundary — hard stop before any Firebase call
     if (!validateDomain(normalized)) {
       setError(
         domainError ||
@@ -67,8 +66,8 @@ export default function RegisterPage() {
       return;
     }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
       return;
     }
 
@@ -80,13 +79,10 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await signUp(normalized, password, displayName);
-
       setSuccess(
-        "Account created. An Admin must assign your role before you can sign in. Redirecting to login…"
+        "Account created. An Admin must assign your role before you can sign in. Redirecting…"
       );
-      setTimeout(() => {
-        router.push("/auth/login");
-      }, 2200);
+      setTimeout(() => router.push("/auth/login"), 2200);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Registration failed.";
@@ -97,140 +93,145 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="auth-shell">
-      <div className="mb-8 text-center">
-        <p className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">
-          PS Industries
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-steel-900">
-          Create account
-        </h1>
-        <p className="mt-2 text-sm text-steel-500">
-          Company email required — {allowedList}
-        </p>
+    <div className="flex min-h-screen flex-col bg-ps-dark">
+      <div className="h-1.5 bg-ps-red" />
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10">
+        <div className="mb-6 text-center">
+          <p className="font-serif text-2xl font-bold tracking-wide text-white">
+            PS INDUSTRIES
+          </p>
+          <p className="mt-1 text-xs text-blue-100">
+            Admin Portal — Greater Noida Plant
+          </p>
+        </div>
+
+        <div className="rounded border border-ps-gray-200 bg-white p-8 shadow-lg">
+          <h1 className="font-serif text-2xl font-bold text-ps-navy">
+            Create account
+          </h1>
+          <p className="mt-1 text-sm text-ps-gray-500">
+            Company email required — {allowedList}
+          </p>
+
+          {error && (
+            <div className="alert-error mt-4" role="alert">
+              {error}
+            </div>
+          )}
+          {success && (
+            <div className="alert-success mt-4" role="status">
+              {success}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="mt-5 space-y-4" noValidate>
+            <div>
+              <label htmlFor="displayName" className="field-label">
+                Full name
+              </label>
+              <input
+                id="displayName"
+                name="displayName"
+                type="text"
+                autoComplete="name"
+                required
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="field-input"
+                placeholder="Your name"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="email" className="field-label">
+                Work email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  validateDomain(e.target.value);
+                }}
+                onBlur={(e) => validateDomain(e.target.value)}
+                className={`field-input ${
+                  domainError
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
+                    : ""
+                }`}
+                placeholder="you@psindustries.in"
+                aria-invalid={Boolean(domainError)}
+              />
+              {domainError && (
+                <p className="mt-1.5 text-sm text-ps-red" role="alert">
+                  {domainError}
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="field-label">
+                Password
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="field-input"
+                placeholder="At least 6 characters"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="confirmPassword" className="field-label">
+                Confirm password
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={6}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="field-input"
+                placeholder="Repeat password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary"
+              disabled={loading || Boolean(domainError) || Boolean(success)}
+            >
+              {loading ? "Creating account…" : "Register"}
+            </button>
+          </form>
+
+          <p className="mt-5 text-center text-sm text-ps-gray-500">
+            Already registered?{" "}
+            <Link
+              href="/auth/login"
+              className="font-semibold text-ps-navy hover:underline"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
       </div>
-
-      <div className="auth-card">
-        {error && (
-          <div className="alert-error mb-5" role="alert">
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="alert-success mb-5" role="status">
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-          <div>
-            <label htmlFor="displayName" className="field-label">
-              Full name
-            </label>
-            <input
-              id="displayName"
-              name="displayName"
-              type="text"
-              autoComplete="name"
-              required
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="field-input"
-              placeholder="Your name"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="field-label">
-              Work email
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              required
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                validateDomain(e.target.value);
-              }}
-              onBlur={(e) => validateDomain(e.target.value)}
-              className={`field-input ${
-                domainError
-                  ? "border-red-400 focus:border-red-500 focus:ring-red-500/20"
-                  : ""
-              }`}
-              placeholder="you@psindustriesindia.in"
-              aria-invalid={Boolean(domainError)}
-              aria-describedby={domainError ? "email-domain-error" : undefined}
-            />
-            {domainError && (
-              <p
-                id="email-domain-error"
-                className="mt-1.5 text-sm text-[var(--danger)]"
-                role="alert"
-              >
-                {domainError}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="password" className="field-label">
-              Password
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="field-input"
-              placeholder="At least 8 characters"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="confirmPassword" className="field-label">
-              Confirm password
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="field-input"
-              placeholder="Repeat password"
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={loading || Boolean(domainError) || Boolean(success)}
-          >
-            {loading ? "Creating account…" : "Register"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-steel-500">
-          Already registered?{" "}
-          <Link
-            href="/auth/login"
-            className="font-semibold text-brand-700 hover:text-brand-800"
-          >
-            Sign in
-          </Link>
-        </p>
-      </div>
+      <footer className="bg-ps-navy py-3 text-center text-xs text-blue-100">
+        © {new Date().getFullYear()} PS Industries — Greater Noida Plant
+      </footer>
     </div>
   );
 }
@@ -240,7 +241,7 @@ function friendlyRegisterError(message: string): string {
     return "An account with this email already exists.";
   }
   if (message.includes("auth/weak-password")) {
-    return "Password is too weak. Use at least 8 characters.";
+    return "Password is too weak. Use at least 6 characters.";
   }
   if (message.includes("auth/invalid-email")) {
     return "Enter a valid email address.";

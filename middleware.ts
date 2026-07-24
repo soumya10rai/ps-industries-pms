@@ -15,17 +15,10 @@ import {
 
 /**
  * Security perimeter for PS Industries PMS.
- *
- * - Intercepts all matched requests
- * - No / invalid session cookie → /auth/login (with ?next=)
- * - Valid session but role not allowed for route → role home
- * - Public: /, /login, /register, /auth/*, /api/auth/*
- * - Sliding refresh when JWT is within the refresh threshold
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Static / asset short-circuit (matcher already excludes most)
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
@@ -34,7 +27,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Legacy path aliases
   if (pathname === "/login") {
     return NextResponse.redirect(new URL("/auth/login", request.url));
   }
@@ -46,16 +38,19 @@ export async function middleware(request: NextRequest) {
   const session = rawToken ? await verifySessionToken(rawToken) : null;
   const publicRoute = isPublicPath(pathname);
 
-  // Unauthenticated
   if (!session) {
     if (publicRoute) {
-      // Drop a stale/invalid cookie if present
       if (rawToken) {
         const res = NextResponse.next();
         res.cookies.set(SESSION_COOKIE_NAME, "", clearSessionCookieOptions());
         return res;
       }
       return NextResponse.next();
+    }
+
+    // Allow PO API routes to return JSON 401 instead of HTML redirect
+    if (pathname.startsWith("/api/po")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const loginUrl = new URL("/auth/login", request.url);
@@ -67,7 +62,6 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
-  // Authenticated users leave auth pages
   if (
     pathname === "/auth/login" ||
     pathname === "/auth/register" ||
@@ -79,14 +73,12 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // Landing → role home when signed in
   if (pathname === "/") {
     return NextResponse.redirect(
       new URL(getHomeForRole(session.role), request.url)
     );
   }
 
-  // Role gate for dashboards
   if (isProtectedDashboard(pathname) && !isAuthorized(session.role, pathname)) {
     return NextResponse.redirect(
       new URL(getHomeForRole(session.role), request.url)
@@ -102,7 +94,6 @@ export async function middleware(request: NextRequest) {
     request: { headers: requestHeaders },
   });
 
-  // Sliding refresh (optional nice-to-have)
   if (rawToken) {
     const refreshed = await refreshSessionToken(rawToken);
     if (refreshed) {
@@ -119,9 +110,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match ALL paths except Next.js internals and common static assets.
-     */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

@@ -1,11 +1,7 @@
 import { redirect } from "next/navigation";
-import { AuthNavbar } from "@/components/AuthNavbar";
+import AppShell from "@/components/AppShell";
 import { getServerSession } from "@/lib/server-auth";
 
-/**
- * Shared shell for all role-gated dashboards under (protected).
- * Middleware is the primary gate; this layout is defense-in-depth.
- */
 export default async function ProtectedLayout({
   children,
 }: Readonly<{
@@ -18,9 +14,14 @@ export default async function ProtectedLayout({
   }
 
   return (
-    <>
-      <AuthNavbar user={user} />
-      <main>{children}</main>
-    </>
+    <AppShell
+      user={{
+        email: user.email,
+        role: user.role,
+        displayName: user.displayName || user.email.split("@")[0],
+      }}
+    >
+      {children}
+    </AppShell>
   );
 }

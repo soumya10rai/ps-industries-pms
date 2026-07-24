@@ -22,67 +22,131 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 /** Primary dashboard path for each role after login. */
 export const ROLE_HOME: Record<UserRole, string> = {
-  admin: "/admin",
-  plant_head: "/plant-head",
-  accountant: "/accountant",
-  store_manager: "/store",
-  production_head: "/production",
+  admin: "/dashboard",
+  plant_head: "/plant-head/approvals",
+  accountant: "/accountant/po-list",
+  store_manager: "/store/inventory",
+  production_head: "/production/runs",
 };
 
 /**
  * Routes each role may access (middleware security perimeter).
- * - /admin/**        — Admin only
- * - /plant-head/**   — Plant Head only
- * - /accountant/**   — Accountant & Admin
- * - /store/**        — Store Manager & Admin
- * - /production/**   — Production Head & Admin
  */
 export const ROLE_ACCESS: Record<UserRole, string[]> = {
-  admin: ["/admin", "/accountant", "/store", "/production"],
-  plant_head: ["/plant-head"],
-  accountant: ["/accountant"],
-  store_manager: ["/store"],
-  production_head: ["/production"],
+  admin: [
+    "/dashboard",
+    "/admin",
+    "/accountant",
+    "/plant-head",
+    "/store",
+    "/production",
+  ],
+  plant_head: ["/dashboard", "/plant-head"],
+  accountant: ["/dashboard", "/accountant"],
+  store_manager: ["/dashboard", "/store"],
+  production_head: ["/dashboard", "/production"],
 };
 
-/**
- * Email domains allowed to register.
- * Security boundary: registration rejects anything outside this list.
- */
 export const ALLOWED_EMAIL_DOMAINS = [
   "psindustriesindia.in",
   "psindustries.in",
 ] as const;
 
 export const SESSION_COOKIE_NAME = "ps_session";
-/** Absolute session lifetime: 24 hours. */
 export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
-/**
- * Sliding refresh: re-issue the JWT when fewer than this many seconds remain.
- * Keeps active users signed in without extending past a fresh 24h window.
- */
-export const SESSION_REFRESH_THRESHOLD_SECONDS = 60 * 60 * 6; // 6 hours
+export const SESSION_REFRESH_THRESHOLD_SECONDS = 60 * 60 * 6;
+
+export type POStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "in_production"
+  | "completed"
+  | "material_check";
 
 export interface SessionPayload {
   uid: string;
   email: string;
   role: UserRole;
   name?: string;
-  /** Issued-at (unix seconds) */
   iat: number;
-  /** Expiration (unix seconds) */
   exp: number;
 }
 
 export interface UserProfile {
   uid: string;
   email: string;
-  /** null until an Admin assigns a role in Firestore or via seed. */
   role: UserRole | null;
   displayName: string;
   createdAt: string;
   updatedAt: string;
   approved: boolean;
+}
+
+export interface POItem {
+  item_code: string;
+  description: string;
+  part_code: string | null;
+  quantity: number;
+  uom: string;
+  rate: number;
+  total: number;
+  material_grade: string | null;
+  colour: string | null;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  po_number: string;
+  po_date: string;
+  customer_code: string;
+  customer_name: string;
+  delivery_date: string | null;
+  payment_terms: string;
+  items: POItem[];
+  total_amount: number;
+  gst: string;
+  status: POStatus;
+  parse_source?: string;
+  source_file?: string;
+  uploaded_by?: string;
+  uploaded_at?: string;
+  approved_by?: string;
+  approved_at?: string;
+  rejection_reason?: string;
+}
+
+export interface InventoryItem {
+  id: string;
+  sku: string;
+  name: string;
+  category: string;
+  quantity: number;
+  uom: string;
+  reorder_level: number;
+  location: string;
+  last_updated: string;
+}
+
+export interface ProductionRun {
+  id: string;
+  run_number: string;
+  po_number: string;
+  customer: string;
+  product: string;
+  quantity: number;
+  completed: number;
+  status: "scheduled" | "running" | "paused" | "completed";
+  machine: string;
+  started_at: string | null;
+  due_date: string;
+}
+
+export interface NavItem {
+  label: string;
+  href: string;
+  icon: string;
+  roles?: UserRole[];
 }
 
 export function isUserRole(value: unknown): value is UserRole {
@@ -92,10 +156,6 @@ export function isUserRole(value: unknown): value is UserRole {
   );
 }
 
-/**
- * Extract and normalize the domain from an email address.
- * Returns null if the email format is invalid.
- */
 export function getEmailDomain(email: string): string | null {
   const trimmed = email.trim().toLowerCase();
   const at = trimmed.lastIndexOf("@");
@@ -103,11 +163,16 @@ export function getEmailDomain(email: string): string | null {
   return trimmed.slice(at + 1);
 }
 
-/**
- * Security boundary: only company-approved domains may register.
- */
 export function isAllowedEmailDomain(email: string): boolean {
   const domain = getEmailDomain(email);
   if (!domain) return false;
   return (ALLOWED_EMAIL_DOMAINS as readonly string[]).includes(domain);
+}
+
+export function formatINR(amount: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }

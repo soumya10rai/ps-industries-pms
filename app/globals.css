@@ -3,15 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --background: #f3f5f8;
-  --foreground: #22262f;
-  --surface: #ffffff;
-  --accent: #0158a0;
-  --accent-soft: #e0effe;
-  --danger: #b42318;
-  --danger-soft: #fef3f2;
-  --success: #027a48;
-  --success-soft: #ecfdf3;
+  --ps-navy: #1e3a8a;
+  --ps-dark: #0f2847;
+  --ps-red: #dc2626;
+  --background: #f9fafb;
+  --foreground: #111827;
 }
 
 html,
@@ -21,51 +17,27 @@ body {
 
 body {
   color: var(--foreground);
-  background:
-    radial-gradient(ellipse 120% 80% at 0% -20%, #dbeafe 0%, transparent 50%),
-    radial-gradient(ellipse 90% 60% at 100% 0%, #e2e8f0 0%, transparent 45%),
-    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
-  background-attachment: fixed;
+  background: var(--background);
 }
 
 @layer components {
-  .auth-shell {
-    @apply mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center px-4 py-10;
-  }
-
-  .auth-card {
-    @apply rounded-2xl border border-steel-200/80 bg-white/95 p-8 shadow-[0_20px_50px_-24px_rgba(34,38,47,0.35)] backdrop-blur;
-  }
-
   .field-label {
-    @apply mb-1.5 block text-sm font-medium text-steel-700;
+    @apply mb-1.5 block text-sm font-medium text-ps-gray-700;
   }
 
   .field-input {
-    @apply w-full rounded-lg border border-steel-200 bg-white px-3.5 py-2.5 text-sm text-steel-900 outline-none transition placeholder:text-steel-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20;
+    @apply w-full rounded border border-ps-gray-300 bg-white px-3.5 py-2.5 text-sm text-ps-gray-900 outline-none transition placeholder:text-ps-gray-400 focus:border-ps-navy focus:ring-2 focus:ring-ps-navy/20;
   }
 
   .btn-primary {
-    @apply inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-800 disabled:cursor-not-allowed disabled:opacity-60;
-  }
-
-  .btn-google {
-    @apply inline-flex w-full items-center justify-center gap-2 rounded-lg border border-steel-200 bg-white px-4 py-2.5 text-sm font-semibold text-steel-800 transition hover:bg-steel-50 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex w-full items-center justify-center gap-2 rounded bg-ps-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163075] disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .alert-error {
-    @apply rounded-lg border border-red-200 bg-[var(--danger-soft)] px-3.5 py-3 text-sm text-[var(--danger)];
+    @apply rounded border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800;
   }
 
   .alert-success {
-    @apply rounded-lg border border-emerald-200 bg-[var(--success-soft)] px-3.5 py-3 text-sm text-[var(--success)];
-  }
-
-  .dashboard-shell {
-    @apply mx-auto max-w-6xl px-4 py-10 sm:px-6;
-  }
-
-  .dashboard-title {
-    @apply font-display text-3xl font-semibold tracking-tight text-steel-900;
+    @apply rounded border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-800;
   }
 }

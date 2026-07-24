@@ -1,23 +1,25 @@
 import type { Metadata } from "next";
-import { DM_Sans, Outfit } from "next/font/google";
+import { Libre_Baskerville, Source_Sans_3 } from "next/font/google";
+import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
-const dmSans = DM_Sans({
+const sourceSans = Source_Sans_3({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
+  variable: "--font-source-sans",
   display: "swap",
 });
 
-const outfit = Outfit({
+const libreBaskerville = Libre_Baskerville({
   subsets: ["latin"],
-  variable: "--font-outfit",
+  weight: ["400", "700"],
+  variable: "--font-libre-baskerville",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "PS Industries | Production Management",
+  title: "PS Industries | Admin Portal",
   description:
-    "Production management system for PS Industries — secure role-based access.",
+    "Production management system for PS Industries — Greater Noida Plant.",
 };
 
 export default function RootLayout({
@@ -28,9 +30,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${dmSans.variable} ${outfit.variable} font-sans antialiased`}
+        className={`${sourceSans.variable} ${libreBaskerville.variable} font-sans antialiased`}
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

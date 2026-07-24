@@ -90,10 +90,6 @@ export interface AuthResult {
   credential: UserCredential;
 }
 
-/**
- * Sign in with email and password.
- * Firebase hashes and verifies passwords server-side.
- */
 export async function signIn(
   email: string,
   password: string
@@ -106,11 +102,6 @@ export async function signIn(
   return { user: credential.user, credential };
 }
 
-/**
- * Register a new user. Enforces company email domain before calling Firebase.
- * Role is NOT set here — Admin assigns roles in Firestore (or via seed).
- * New users get `approved: false` until an admin assigns a role.
- */
 export async function signUp(
   email: string,
   password: string,
@@ -124,8 +115,8 @@ export async function signUp(
     );
   }
 
-  if (password.length < 8) {
-    throw new Error("Password must be at least 8 characters.");
+  if (password.length < 6) {
+    throw new Error("Password must be at least 6 characters.");
   }
 
   const credential = await createUserWithEmailAndPassword(
@@ -140,8 +131,6 @@ export async function signUp(
     });
   }
 
-  // Create Firestore profile without a privileged role.
-  // Admin must assign role via Firestore or the secure seed endpoint.
   await setDoc(
     doc(getFirebaseDb(), "users", credential.user.uid),
     {
@@ -158,9 +147,6 @@ export async function signUp(
   return { user: credential.user, credential };
 }
 
-/**
- * Google Sign-In. Rejects accounts whose email domain is not company-approved.
- */
 export async function signInWithGoogle(): Promise<AuthResult> {
   const credential = await signInWithPopup(getFirebaseAuth(), googleProvider);
   const email = credential.user.email;
@@ -190,17 +176,10 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   return { user: credential.user, credential };
 }
 
-/**
- * Sign out of Firebase Auth on the client.
- * Call the /api/auth/logout route as well to clear the httpOnly session cookie.
- */
 export async function logout(): Promise<void> {
   await signOut(getFirebaseAuth());
 }
 
-/**
- * Resolve the current Firebase user, or null if signed out.
- */
 export function getCurrentUser(): Promise<User | null> {
   const authInstance = getFirebaseAuth();
   return new Promise((resolve) => {
@@ -211,17 +190,12 @@ export function getCurrentUser(): Promise<User | null> {
   });
 }
 
-/**
- * Fetch the Firestore user profile including role at /users/{uid}.
- * Role lives on the document as the `role` field (path: users/{uid} → role).
- */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const snap = await getDoc(doc(getFirebaseDb(), "users", uid));
   if (!snap.exists()) return null;
 
   const data = snap.data();
   const role = data.role;
-
   const resolvedRole = isUserRole(role) ? role : null;
 
   return {
@@ -235,10 +209,6 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   };
 }
 
-/**
- * Read only the role field from /users/{uid}.
- * Returns null if the user has no assigned role yet.
- */
 export async function getUserRole(uid: string): Promise<UserRole | null> {
   const snap = await getDoc(doc(getFirebaseDb(), "users", uid));
   if (!snap.exists()) return null;

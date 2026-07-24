@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
-import { isUserRole, type UserRole } from "@/lib/types";
+import { ROLE_HOME, isUserRole, type UserRole } from "@/lib/types";
 import { FieldValue } from "firebase-admin/firestore";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/session";
 
 /**
- * Sample users seeded into Firebase Auth + Firestore.
- * Passwords are for local/dev only — change immediately in production.
+ * Sample users — passwords for local/dev only. Change in production.
  */
 const SAMPLE_USERS: Array<{
   email: string;
@@ -16,31 +15,31 @@ const SAMPLE_USERS: Array<{
 }> = [
   {
     email: "admin@psindustries.in",
-    password: "Admin@PS2024!",
+    password: "admin123",
     displayName: "System Admin",
     role: "admin",
   },
   {
-    email: "plant@psindustriesindia.in",
-    password: "Plant@PS2024!",
+    email: "plant@psindustries.in",
+    password: "plant123",
     displayName: "Plant Head",
     role: "plant_head",
   },
   {
-    email: "accountant@psindustriesindia.in",
-    password: "Account@PS2024!",
+    email: "accountant@psindustries.in",
+    password: "acc123",
     displayName: "Accountant",
     role: "accountant",
   },
   {
-    email: "store@psindustriesindia.in",
-    password: "Store@PS2024!",
+    email: "store@psindustries.in",
+    password: "store123",
     displayName: "Store Manager",
     role: "store_manager",
   },
   {
-    email: "production@psindustriesindia.in",
-    password: "Prod@PS2024!",
+    email: "production@psindustries.in",
+    password: "prod123",
     displayName: "Production Head",
     role: "production_head",
   },
@@ -48,15 +47,6 @@ const SAMPLE_USERS: Array<{
 
 /**
  * POST /api/auth/seed
- *
- * Secure seed: creates sample Auth users and writes role to Firestore
- * at /users/{uid} with field `role`.
- *
- * Authorization (any one):
- * 1. Header `x-seed-secret` matching SEED_SECRET env
- * 2. Existing admin session cookie
- *
- * Body (optional): { email, role } to assign a single role without full seed.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -89,7 +79,6 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json().catch(() => ({}));
 
-    // Single role assignment: { email, role }
     if (body.email && body.role) {
       return assignRole(String(body.email), body.role);
     }
@@ -118,7 +107,6 @@ export async function POST(request: NextRequest) {
         uid = created.uid;
       }
 
-      // Role stored at /users/{uid} → role field
       await db.collection("users").doc(uid).set(
         {
           email: sample.email,
@@ -133,9 +121,10 @@ export async function POST(request: NextRequest) {
 
       results.push({
         email: sample.email,
+        password: sample.password,
         uid,
         role: sample.role,
-        home: `/${sample.role === "store_manager" ? "store" : sample.role === "production_head" ? "production" : sample.role === "plant_head" ? "plant-head" : sample.role}`,
+        home: ROLE_HOME[sample.role],
       });
     }
 
@@ -155,7 +144,10 @@ export async function POST(request: NextRequest) {
 async function assignRole(email: string, rawRole: unknown) {
   if (!isUserRole(rawRole)) {
     return NextResponse.json(
-      { error: "Invalid role. Use admin | plant_head | accountant | store_manager | production_head." },
+      {
+        error:
+          "Invalid role. Use admin | plant_head | accountant | store_manager | production_head.",
+      },
       { status: 400 }
     );
   }
