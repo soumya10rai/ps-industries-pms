@@ -40,6 +40,8 @@ export function isPublicPath(pathname: string): boolean {
   ];
   if (publicExact.includes(pathname)) return true;
   if (pathname.startsWith("/api/auth/")) return true;
+  // One-time seed endpoint (still gated by x-seed-secret in the handler)
+  if (pathname === "/api/seed-users") return true;
   return false;
 }
 
