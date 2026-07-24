@@ -223,6 +223,7 @@ export const MOCK_PRODUCTION_RUNS: ProductionRun[] = [
 
 /** In-memory store for API mutations during the session. */
 let poStore: PurchaseOrder[] = structuredClone(MOCK_POS);
+let runStore: ProductionRun[] = structuredClone(MOCK_PRODUCTION_RUNS);
 
 export function getPOStore(): PurchaseOrder[] {
   return poStore;
@@ -246,4 +247,24 @@ export function upsertPO(po: PurchaseOrder): PurchaseOrder {
     poStore = [po, ...poStore];
   }
   return po;
+}
+
+export function getRunStore(): ProductionRun[] {
+  return runStore;
+}
+
+export function findRun(idOrNumber: string): ProductionRun | undefined {
+  return runStore.find(
+    (run) => run.id === idOrNumber || run.run_number === idOrNumber
+  );
+}
+
+export function upsertRun(run: ProductionRun): ProductionRun {
+  const idx = runStore.findIndex((r) => r.id === run.id);
+  if (idx >= 0) {
+    runStore[idx] = run;
+  } else {
+    runStore = [run, ...runStore];
+  }
+  return run;
 }

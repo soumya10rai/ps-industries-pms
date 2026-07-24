@@ -79,11 +79,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw new Error("No authenticated user.");
     }
     const idToken = await current.getIdToken(true);
-    const res = await fetch("/api/auth/session", {
+
+    // Prefer pages API signin, fall back to app router session route
+    let res = await fetch("/api/auth/signin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ idToken }),
     });
+
+    if (res.status === 404) {
+      res = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+      });
+    }
+
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || "Failed to create session.");

@@ -43,6 +43,16 @@ export function isPublicPath(pathname: string): boolean {
   return false;
 }
 
+/** API paths that should return JSON 401 instead of an HTML login redirect. */
+export function isJsonApiPath(pathname: string): boolean {
+  return (
+    pathname.startsWith("/api/po") ||
+    pathname.startsWith("/api/material-calc") ||
+    pathname.startsWith("/api/production") ||
+    pathname.startsWith("/api/admin")
+  );
+}
+
 export function isProtectedDashboard(pathname: string): boolean {
   return (
     pathname.startsWith("/dashboard") ||

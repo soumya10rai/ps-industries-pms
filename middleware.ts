@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   getHomeForRole,
   isAuthorized,
+  isJsonApiPath,
   isProtectedDashboard,
   isPublicPath,
 } from "@/lib/auth";
@@ -48,8 +49,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Allow PO API routes to return JSON 401 instead of HTML redirect
-    if (pathname.startsWith("/api/po")) {
+    if (isJsonApiPath(pathname)) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
