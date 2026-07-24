@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { stripUndefined } from "@/lib/firestore-utils";
 import { findPO, upsertPO } from "@/lib/mock-data";
 import { isAwaitingApproval, type PurchaseOrder } from "@/lib/types";
 
@@ -80,11 +81,11 @@ export default async function handler(
       .collection("po_uploads")
       .doc(rejected.id)
       .set(
-        {
+        stripUndefined({
           ...rejected,
           notes: reason,
           updatedAt: FieldValue.serverTimestamp(),
-        },
+        }),
         { merge: true }
       );
 

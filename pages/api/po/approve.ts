@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { stripUndefined } from "@/lib/firestore-utils";
 import { findPO, upsertPO } from "@/lib/mock-data";
 import { isAwaitingApproval, type PurchaseOrder } from "@/lib/types";
 
@@ -59,23 +60,25 @@ export default async function handler(
     );
     const approvedAt = new Date().toISOString();
 
+    const { rejection_reason: _omit, ...rest } = existing;
     const approved: PurchaseOrder = {
-      ...existing,
+      ...rest,
       status: "approved",
       approved_by: approvedBy,
       approved_at: approvedAt,
-      rejection_reason: undefined,
     };
 
     await getAdminDb()
       .collection("po_uploads")
       .doc(approved.id)
       .set(
-        {
+        stripUndefined({
           ...approved,
-          notes: notes || null,
+          notes: notes?.trim() ? notes.trim() : null,
+          // Clear any previous rejection reason in Firestore
+          rejection_reason: FieldValue.delete(),
           updatedAt: FieldValue.serverTimestamp(),
-        },
+        }),
         { merge: true }
       );
 

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase-admin";
+import { stripUndefined } from "@/lib/firestore-utils";
 import { upsertPO } from "@/lib/mock-data";
 import type { PurchaseOrder } from "@/lib/types";
 
@@ -33,27 +34,35 @@ export default async function handler(
     const docId = po.id || `po_${Date.now()}`;
 
     const saved: PurchaseOrder = {
-      ...po,
       id: docId,
+      po_number: po.po_number,
+      po_date: po.po_date,
+      customer_code: po.customer_code,
+      customer_name: po.customer_name,
+      delivery_date: po.delivery_date ?? null,
+      payment_terms: po.payment_terms,
+      items: po.items,
+      total_amount: po.total_amount,
+      gst: po.gst,
       status: po.status || "new",
+      parse_source: po.parse_source || "upload",
+      source_file: po.source_file ?? null,
       uploaded_by: uploadedBy,
       uploaded_at: po.uploaded_at || nowIso,
-      parse_source: po.parse_source || "upload",
-    };
+    } as PurchaseOrder;
 
     const db = getAdminDb();
     const ref = db.collection("po_uploads").doc(docId);
 
     await ref.set(
-      {
+      stripUndefined({
         ...saved,
         createdAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
-      },
+      }),
       { merge: true }
     );
 
-    // Keep process-local cache in sync for list/approve during this session
     upsertPO(saved);
 
     return res.status(200).json({
