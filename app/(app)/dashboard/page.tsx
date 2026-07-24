@@ -17,21 +17,18 @@ export default function DashboardPage() {
   ).length;
 
   return (
-    <div>
+    <div className="ps-section">
       <PageHeader
         title="Dashboard"
         subtitle="Plant-wide overview for Greater Noida — orders, inventory, and production at a glance."
         actions={
-          <Link
-            href="/accountant/po-upload"
-            className="rounded bg-ps-navy px-4 py-2 text-sm font-semibold text-white hover:bg-[#163075]"
-          >
+          <Link href="/accountant/po-upload" className="btn-primary">
             Upload PO
           </Link>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           label="Open PO Value"
           value={formatINR(totalPOValue)}
@@ -54,14 +51,14 @@ export default function DashboardPage() {
         />
       </div>
 
-      <section className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-serif text-xl font-bold text-ps-navy">
+      <section>
+        <div className="mb-4 flex items-center justify-between border-b border-ps-navy/20 pb-3">
+          <h2 className="ps-heading-accent font-serif text-ps-h2 text-ps-navy">
             Recent Purchase Orders
           </h2>
           <Link
             href="/accountant/po-list"
-            className="text-sm font-semibold text-ps-navy hover:underline"
+            className="text-sm font-semibold text-ps-navy transition duration-200 ease-in-out hover:underline"
           >
             View all
           </Link>
@@ -91,9 +88,9 @@ export default function DashboardPage() {
         </DataTable>
       </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
+      <section className="grid gap-8 lg:grid-cols-2">
         <div>
-          <h2 className="mb-3 font-serif text-xl font-bold text-ps-navy">
+          <h2 className="ps-heading-accent mb-4 font-serif text-ps-h2 text-ps-navy">
             Production Runs
           </h2>
           <DataTable headers={["Run", "Product", "Progress", "Status"]}>
@@ -113,7 +110,7 @@ export default function DashboardPage() {
           </DataTable>
         </div>
         <div>
-          <h2 className="mb-3 font-serif text-xl font-bold text-ps-navy">
+          <h2 className="ps-heading-accent mb-4 font-serif text-ps-h2 text-ps-navy">
             Inventory Alerts
           </h2>
           <DataTable headers={["SKU", "Name", "Qty", "Reorder"]}>

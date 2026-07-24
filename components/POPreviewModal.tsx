@@ -38,6 +38,8 @@ export default function POPreviewModal({
     await onReject(notes.trim());
   }
 
+  const showError = Boolean(localError || error);
+
   return (
     <div
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4"
@@ -49,15 +51,18 @@ export default function POPreviewModal({
       }}
     >
       <div
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded border border-ps-gray-200 bg-white shadow-xl"
+        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-ps-gray-200 bg-white shadow-card-hover"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between border-b border-ps-gray-100 bg-ps-navy px-5 py-4 text-white">
+        <div className="flex items-start justify-between border-b border-ps-navy/20 bg-ps-navy px-6 py-4 text-white">
           <div>
-            <h2 id="po-approval-title" className="font-serif text-xl font-bold">
+            <h2
+              id="po-approval-title"
+              className="font-serif text-ps-h2 text-white"
+            >
               Review Purchase Order
             </h2>
-            <p className="mt-0.5 text-xs text-blue-100">
+            <p className="mt-1 text-xs leading-relaxed text-blue-100">
               Approve or reject for Greater Noida Plant
             </p>
           </div>
@@ -65,15 +70,15 @@ export default function POPreviewModal({
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="rounded px-2 py-1 text-lg leading-none hover:bg-white/10 disabled:opacity-50"
+            className="rounded-lg px-2 py-1 text-lg leading-none transition duration-200 ease-in-out hover:bg-white/10 disabled:opacity-50"
             aria-label="Close"
           >
             ×
           </button>
         </div>
 
-        <div className="p-5">
-          <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <div className="px-6 py-4">
+          <dl className="grid gap-4 text-sm leading-relaxed sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <dt className="text-ps-gray-500">PO Number</dt>
               <dd className="font-semibold text-ps-navy">{po.po_number}</dd>
@@ -102,39 +107,41 @@ export default function POPreviewModal({
             </div>
           </dl>
 
-          <div className="mt-5 overflow-x-auto border border-ps-gray-200">
-            <table className="min-w-full text-left text-sm">
+          <div className="mt-6 overflow-x-auto rounded-lg border border-ps-gray-200">
+            <table className="min-w-full text-left text-sm leading-relaxed">
               <thead className="bg-ps-navy text-white">
                 <tr>
-                  <th className="px-3 py-2 text-xs uppercase">Item Code</th>
-                  <th className="px-3 py-2 text-xs uppercase">Description</th>
-                  <th className="px-3 py-2 text-xs uppercase">Qty</th>
-                  <th className="px-3 py-2 text-xs uppercase">Rate</th>
-                  <th className="px-3 py-2 text-xs uppercase">Total</th>
+                  <th className="px-6 py-3 text-xs uppercase">Item Code</th>
+                  <th className="px-6 py-3 text-xs uppercase">Description</th>
+                  <th className="px-6 py-3 text-xs uppercase">Qty</th>
+                  <th className="px-6 py-3 text-xs uppercase">Rate</th>
+                  <th className="px-6 py-3 text-xs uppercase">Total</th>
                 </tr>
               </thead>
               <tbody>
                 {po.items.map((item, i) => (
                   <tr
                     key={`${item.item_code}-${i}`}
-                    className={i % 2 === 0 ? "bg-white" : "bg-ps-gray-50"}
+                    className={`transition duration-200 ease-in-out hover:bg-ps-gray-100 ${
+                      i % 2 === 0 ? "bg-white" : "bg-ps-gray-50/80"
+                    }`}
                   >
-                    <td className="px-3 py-2 font-medium text-ps-navy">
+                    <td className="px-6 py-3.5 font-medium text-ps-navy">
                       {item.item_code}
                     </td>
-                    <td className="px-3 py-2">{item.description}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-6 py-3.5">{item.description}</td>
+                    <td className="px-6 py-3.5">
                       {item.quantity.toLocaleString("en-IN")} {item.uom}
                     </td>
-                    <td className="px-3 py-2">{item.rate}</td>
-                    <td className="px-3 py-2">{formatINR(item.total)}</td>
+                    <td className="px-6 py-3.5">{item.rate}</td>
+                    <td className="px-6 py-3.5">{formatINR(item.total)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-6">
             <label htmlFor="approval-notes" className="field-label">
               Notes
             </label>
@@ -143,35 +150,35 @@ export default function POPreviewModal({
               rows={3}
               value={notes}
               disabled={busy}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => {
+                setNotes(e.target.value);
+                setLocalError(null);
+              }}
               placeholder="Required when rejecting — optional for approval"
-              className="field-input min-h-[88px] resize-y"
+              className={`field-input min-h-[88px] resize-y ${
+                showError ? "field-input-error" : ""
+              }`}
             />
           </div>
 
-          {(localError || error) && (
+          {showError && (
             <div className="alert-error mt-4" role="alert">
               {localError || error}
             </div>
           )}
 
-          <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-ps-navy/20 pt-4">
             <Button variant="secondary" onClick={onCancel} disabled={busy}>
               Cancel
+            </Button>
+            <Button variant="danger" disabled={busy} onClick={() => void handleReject()}>
+              {busy ? "Working…" : "Reject"}
             </Button>
             <button
               type="button"
               disabled={busy}
-              onClick={() => void handleReject()}
-              className="inline-flex items-center justify-center rounded bg-ps-red px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {busy ? "Working…" : "Reject"}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
               onClick={() => void handleApprove()}
-              className="inline-flex items-center justify-center rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white shadow-btn transition duration-200 ease-in-out hover:bg-emerald-700 hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {busy ? "Working…" : "Approve"}
             </button>

@@ -197,9 +197,9 @@ function NavLink({
     <Link
       href={item.href}
       onClick={onNavigate}
-      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm transition ${
+      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition duration-200 ease-in-out ${
         active
-          ? "bg-ps-navy text-white"
+          ? "bg-ps-navy text-white shadow-nav-active"
           : "text-blue-50/90 hover:bg-white/10 hover:text-white"
       }`}
     >

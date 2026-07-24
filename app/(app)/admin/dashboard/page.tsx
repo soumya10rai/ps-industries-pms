@@ -12,29 +12,23 @@ import { formatINR } from "@/lib/types";
 
 export default function AdminDashboardPage() {
   return (
-    <div>
+    <div className="ps-section">
       <PageHeader
         title="Admin Overview"
         subtitle="Configure users, monitor plant KPIs, and oversee every operational stream."
         actions={
-          <div className="flex gap-2">
-            <Link
-              href="/dashboard"
-              className="rounded border border-ps-navy px-4 py-2 text-sm font-semibold text-ps-navy"
-            >
+          <div className="flex gap-3">
+            <Link href="/dashboard" className="btn-secondary">
               Main Dashboard
             </Link>
-            <Link
-              href="/accountant/po-list"
-              className="rounded bg-ps-navy px-4 py-2 text-sm font-semibold text-white"
-            >
+            <Link href="/accountant/po-list" className="btn-primary">
               Manage Orders
             </Link>
           </div>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           label="PO Pipeline"
           value={formatINR(MOCK_POS.reduce((s, p) => s + p.total_amount, 0))}
@@ -61,8 +55,8 @@ export default function AdminDashboardPage() {
         />
       </div>
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-serif text-xl font-bold text-ps-navy">
+      <section>
+        <h2 className="ps-heading-accent mb-4 font-serif text-ps-h2 text-ps-navy">
           Sample Accounts
         </h2>
         <DataTable headers={["Role", "Email", "Password", "Home"]}>
@@ -97,7 +91,10 @@ export default function AdminDashboardPage() {
                 </code>
               </Td>
               <Td>
-                <Link href={row[3]} className="text-ps-navy hover:underline">
+                <Link
+                  href={row[3]}
+                  className="text-ps-navy transition duration-200 ease-in-out hover:underline"
+                >
                   {row[3]}
                 </Link>
               </Td>
@@ -106,13 +103,11 @@ export default function AdminDashboardPage() {
         </DataTable>
       </section>
 
-      <section className="mt-8">
-        <h2 className="mb-3 font-serif text-xl font-bold text-ps-navy">
+      <section>
+        <h2 className="ps-heading-accent mb-4 font-serif text-ps-h2 text-ps-navy">
           Order Pipeline
         </h2>
-        <DataTable
-          headers={["PO", "Customer", "Items", "Total", "Status"]}
-        >
+        <DataTable headers={["PO", "Customer", "Items", "Total", "Status"]}>
           {MOCK_POS.map((po, i) => (
             <TableRow key={po.id} index={i}>
               <Td className="font-semibold text-ps-navy">{po.po_number}</Td>

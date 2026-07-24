@@ -112,7 +112,7 @@ export default function POUploadPage() {
   }
 
   return (
-    <div>
+    <div className="ps-section">
       <PageHeader
         title="Upload Purchase Order"
         subtitle="Select a PDF or Excel PO. Filenames with BMR, Kent, or Prem map to the Greater Noida sample fixtures."
@@ -122,22 +122,24 @@ export default function POUploadPage() {
         <Toast message={toast} type="success" onClose={() => setToast(null)} />
       )}
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-8 sm:grid-cols-3">
         {SAMPLE_FILES.map((sample) => (
           <button
             key={sample.filename}
             type="button"
             disabled={busy}
             onClick={() => parseByFilename(sample.filename)}
-            className="border-l-4 border-ps-red bg-white p-4 text-left shadow-card transition hover:bg-ps-gray-50 disabled:opacity-60"
+            className="rounded-lg border-l-4 border-ps-red bg-white px-6 py-4 text-left shadow-card transition duration-200 ease-in-out hover:bg-ps-gray-100 hover:shadow-card-hover disabled:opacity-60"
           >
             <p className="text-xs font-semibold uppercase tracking-wide text-ps-gray-500">
               Quick sample
             </p>
-            <p className="mt-1 font-serif text-lg font-bold text-ps-navy">
+            <p className="mt-2 font-serif text-ps-h2 text-ps-navy">
               {sample.label}
             </p>
-            <p className="mt-1 text-xs text-ps-gray-500">{sample.hint}</p>
+            <p className="mt-2 text-xs leading-relaxed text-ps-gray-500">
+              {sample.hint}
+            </p>
             <p className="mt-2 truncate text-[11px] text-ps-gray-400">
               {sample.filename}
             </p>
@@ -147,7 +149,7 @@ export default function POUploadPage() {
 
       <form
         onSubmit={handleParse}
-        className="max-w-xl border border-ps-gray-200 bg-white p-6 shadow-card"
+        className="max-w-xl rounded-lg border border-ps-gray-200 bg-white px-6 py-4 shadow-card"
       >
         <label htmlFor="po-file" className="field-label">
           PO file (PDF / Excel)
@@ -156,15 +158,20 @@ export default function POUploadPage() {
           id="po-file"
           type="file"
           accept=".pdf,.xlsx,.xls,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          className="field-input file:mr-3 file:rounded file:border-0 file:bg-ps-navy file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white"
+          onChange={(e) => {
+            setFile(e.target.files?.[0] ?? null);
+            setError(null);
+          }}
+          className={`field-input file:mr-3 file:rounded-lg file:border-0 file:bg-ps-navy file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white file:transition file:duration-200 file:ease-in-out hover:file:bg-[#163075] ${
+            error ? "field-input-error" : ""
+          }`}
         />
         {file && (
-          <p className="mt-2 text-sm text-ps-gray-600">
+          <p className="mt-2 text-sm leading-relaxed text-ps-gray-600">
             Selected: <span className="font-medium">{file.name}</span>
           </p>
         )}
-        <p className="mt-2 text-xs text-ps-gray-500">
+        <p className="mt-2 text-xs leading-relaxed text-ps-gray-500">
           Tip: name files with <strong>BMR</strong>, <strong>Kent</strong>, or{" "}
           <strong>Prem</strong> (or PO numbers) to load the matching fixture.
         </p>
@@ -175,7 +182,7 @@ export default function POUploadPage() {
           </div>
         )}
 
-        <div className="mt-5 flex gap-2">
+        <div className="mt-6 flex gap-3 border-t border-ps-navy/20 pt-4">
           <Button type="submit" disabled={busy || !file}>
             {busy && !modalOpen ? "Parsing…" : "Parse PO"}
           </Button>
@@ -191,33 +198,33 @@ export default function POUploadPage() {
           onClick={closeModal}
         >
           <div
-            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded border border-ps-gray-200 bg-white shadow-xl"
+            className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-ps-gray-200 bg-white shadow-card-hover"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between border-b border-ps-gray-100 bg-ps-navy px-5 py-4 text-white">
+            <div className="flex items-start justify-between border-b border-ps-navy/20 bg-ps-navy px-6 py-4 text-white">
               <div>
                 <h2
                   id="po-preview-title"
-                  className="font-serif text-xl font-bold"
+                  className="font-serif text-ps-h2 text-white"
                 >
                   PO Preview
                 </h2>
-                <p className="mt-0.5 text-xs text-blue-100">
+                <p className="mt-1 text-xs leading-relaxed text-blue-100">
                   Review parsed data before saving to Firestore
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="rounded px-2 py-1 text-lg leading-none hover:bg-white/10"
+                className="rounded-lg px-2 py-1 text-lg leading-none transition duration-200 ease-in-out hover:bg-white/10"
                 aria-label="Close"
               >
                 ×
               </button>
             </div>
 
-            <div className="p-5">
-              <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="px-6 py-4">
+              <dl className="grid gap-4 text-sm leading-relaxed sm:grid-cols-2">
                 <div>
                   <dt className="text-ps-gray-500">PO Number</dt>
                   <dd className="font-semibold text-ps-navy">
@@ -252,32 +259,34 @@ export default function POUploadPage() {
                 </div>
               </dl>
 
-              <div className="mt-5 overflow-x-auto border border-ps-gray-200">
-                <table className="min-w-full text-left text-sm">
+              <div className="mt-6 overflow-x-auto rounded-lg border border-ps-gray-200">
+                <table className="min-w-full text-left text-sm leading-relaxed">
                   <thead className="bg-ps-navy text-white">
                     <tr>
-                      <th className="px-3 py-2 text-xs uppercase">Code</th>
-                      <th className="px-3 py-2 text-xs uppercase">Description</th>
-                      <th className="px-3 py-2 text-xs uppercase">Qty</th>
-                      <th className="px-3 py-2 text-xs uppercase">Rate</th>
-                      <th className="px-3 py-2 text-xs uppercase">Total</th>
+                      <th className="px-6 py-3 text-xs uppercase">Code</th>
+                      <th className="px-6 py-3 text-xs uppercase">Description</th>
+                      <th className="px-6 py-3 text-xs uppercase">Qty</th>
+                      <th className="px-6 py-3 text-xs uppercase">Rate</th>
+                      <th className="px-6 py-3 text-xs uppercase">Total</th>
                     </tr>
                   </thead>
                   <tbody>
                     {preview.items.map((item, i) => (
                       <tr
                         key={`${item.item_code}-${i}`}
-                        className={i % 2 === 0 ? "bg-white" : "bg-ps-gray-50"}
+                        className={`transition duration-200 ease-in-out hover:bg-ps-gray-100 ${
+                          i % 2 === 0 ? "bg-white" : "bg-ps-gray-50/80"
+                        }`}
                       >
-                        <td className="px-3 py-2 font-medium text-ps-navy">
+                        <td className="px-6 py-3.5 font-medium text-ps-navy">
                           {item.item_code}
                         </td>
-                        <td className="px-3 py-2">{item.description}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-6 py-3.5">{item.description}</td>
+                        <td className="px-6 py-3.5">
                           {item.quantity.toLocaleString("en-IN")} {item.uom}
                         </td>
-                        <td className="px-3 py-2">{item.rate}</td>
-                        <td className="px-3 py-2">{formatINR(item.total)}</td>
+                        <td className="px-6 py-3.5">{item.rate}</td>
+                        <td className="px-6 py-3.5">{formatINR(item.total)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -290,7 +299,7 @@ export default function POUploadPage() {
                 </div>
               )}
 
-              <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-ps-navy/20 pt-4">
                 <Button variant="secondary" onClick={closeModal} disabled={busy}>
                   Cancel
                 </Button>

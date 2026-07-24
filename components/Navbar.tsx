@@ -55,7 +55,7 @@ export default function Navbar({ onMenuToggle, serverUser }: NavbarProps) {
         <button
           type="button"
           onClick={onMenuToggle}
-          className="rounded p-1.5 hover:bg-white/10 lg:hidden"
+          className="rounded-lg p-1.5 transition duration-200 ease-in-out hover:bg-white/10 lg:hidden"
           aria-label="Toggle sidebar"
         >
           <svg
@@ -83,7 +83,7 @@ export default function Navbar({ onMenuToggle, serverUser }: NavbarProps) {
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/10"
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition duration-200 ease-in-out hover:bg-white/10"
         >
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
             {initials || "U"}
@@ -119,15 +119,15 @@ export default function Navbar({ onMenuToggle, serverUser }: NavbarProps) {
               aria-label="Close menu"
               onClick={() => setOpen(false)}
             />
-            <div className="absolute right-0 z-50 mt-1 w-56 overflow-hidden rounded-md border border-ps-gray-200 bg-white text-ps-gray-800 shadow-lg">
-              <div className="border-b border-ps-gray-100 px-4 py-3">
+            <div className="absolute right-0 z-50 mt-1 w-56 overflow-hidden rounded-lg border border-ps-gray-200 bg-white text-ps-gray-800 shadow-card">
+              <div className="border-b border-ps-navy/20 px-4 py-3">
                 <p className="truncate text-sm font-semibold">{displayName}</p>
                 <p className="truncate text-xs text-ps-gray-500">{email}</p>
               </div>
               <Link
                 href="/admin/dashboard"
                 onClick={() => setOpen(false)}
-                className="block px-4 py-2.5 text-sm hover:bg-ps-gray-50"
+                className="block px-4 py-2.5 text-sm transition duration-200 ease-in-out hover:bg-ps-gray-100"
               >
                 Profile &amp; Settings
               </Link>
@@ -135,7 +135,7 @@ export default function Navbar({ onMenuToggle, serverUser }: NavbarProps) {
                 type="button"
                 disabled={busy}
                 onClick={handleLogout}
-                className="w-full px-4 py-2.5 text-left text-sm text-ps-red hover:bg-red-50 disabled:opacity-60"
+                className="w-full px-4 py-2.5 text-left text-sm text-ps-red transition duration-200 ease-in-out hover:bg-red-50 disabled:opacity-60"
               >
                 {busy ? "Signing out…" : "Sign out"}
               </button>

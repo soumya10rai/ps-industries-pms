@@ -28,7 +28,9 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <AuthFrame>
-          <p className="text-center text-sm text-ps-gray-500">Loading…</p>
+          <p className="text-center text-sm leading-relaxed text-ps-gray-500">
+            Loading…
+          </p>
         </AuthFrame>
       }
     >
@@ -60,9 +62,7 @@ function LoginForm() {
 
     const normalized = email.trim().toLowerCase();
     if (!isAllowedEmailDomain(normalized)) {
-      setError(
-        `Only company emails (${domainHint}) can sign in.`
-      );
+      setError(`Only company emails (${domainHint}) can sign in.`);
       return;
     }
 
@@ -110,28 +110,30 @@ function LoginForm() {
 
   return (
     <AuthFrame>
-      <div className="mb-6 text-center">
-        <p className="font-serif text-2xl font-bold tracking-wide text-white">
+      <div className="mb-8 text-center">
+        <p className="font-serif text-ps-h1 tracking-wide text-white">
           PS INDUSTRIES
         </p>
-        <p className="mt-1 text-xs text-blue-100">
+        <p className="mt-2 text-sm leading-relaxed text-blue-100">
           Admin Portal — Greater Noida Plant
         </p>
       </div>
 
-      <div className="rounded border border-ps-gray-200 bg-white p-8 shadow-lg">
-        <h1 className="font-serif text-2xl font-bold text-ps-navy">Sign in</h1>
-        <p className="mt-1 text-sm text-ps-gray-500">
+      <div className="rounded-lg border border-ps-gray-200 bg-white px-6 py-8 shadow-card">
+        <h1 className="ps-heading-accent font-serif text-ps-h1 text-ps-navy">
+          Sign in
+        </h1>
+        <p className="mt-3 text-sm leading-relaxed text-ps-gray-500">
           Use your company account to access the plant portal.
         </p>
 
         {error && (
-          <div className="alert-error mt-4" role="alert">
+          <div className="alert-error mt-6" role="alert">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
           <div>
             <label htmlFor="email" className="field-label">
               Email
@@ -144,7 +146,7 @@ function LoginForm() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="field-input"
+              className={`field-input ${error ? "field-input-error" : ""}`}
               placeholder="you@psindustries.in"
             />
           </div>
@@ -161,19 +163,19 @@ function LoginForm() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="field-input"
+              className={`field-input ${error ? "field-input-error" : ""}`}
               placeholder="••••••••"
             />
           </div>
 
-          <button type="submit" className="btn-primary" disabled={loading}>
+          <button type="submit" className="btn-primary w-full" disabled={loading}>
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        <div className="relative my-5">
+        <div className="relative my-6">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-ps-gray-200" />
+            <div className="w-full border-t border-ps-navy/20" />
           </div>
           <div className="relative flex justify-center text-xs uppercase tracking-wide">
             <span className="bg-white px-3 text-ps-gray-400">or</span>
@@ -184,32 +186,32 @@ function LoginForm() {
           type="button"
           onClick={handleGoogle}
           disabled={googleLoading || loading}
-          className="inline-flex w-full items-center justify-center gap-2 rounded border border-ps-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-ps-gray-800 transition hover:bg-ps-gray-50 disabled:opacity-60"
+          className="btn-secondary w-full border-ps-gray-300 text-ps-gray-800"
         >
           <GoogleIcon />
           {googleLoading ? "Connecting…" : "Continue with Google"}
         </button>
 
-        <p className="mt-5 text-center text-sm text-ps-gray-500">
+        <p className="mt-6 text-center text-sm leading-relaxed text-ps-gray-500">
           Need an account?{" "}
           <Link
             href="/auth/register"
-            className="font-semibold text-ps-navy hover:underline"
+            className="font-semibold text-ps-navy transition duration-200 ease-in-out hover:underline"
           >
             Register
           </Link>
         </p>
       </div>
 
-      <div className="mt-4 rounded border border-white/20 bg-white/10 p-4 text-left text-xs text-blue-50">
-        <p className="mb-2 font-semibold text-white">Sample users (seeded)</p>
+      <div className="mt-6 rounded-lg border border-white/20 bg-white/10 px-6 py-4 text-left text-xs leading-relaxed text-blue-50">
+        <p className="mb-3 font-semibold text-white">Sample users (seeded)</p>
         <ul className="space-y-1">
           {DEMO_USERS.map((u) => (
             <li key={u.email}>
               <button
                 type="button"
                 onClick={() => fillDemo(u.email, u.password)}
-                className="w-full rounded px-1 py-0.5 text-left hover:bg-white/10"
+                className="w-full rounded-lg px-2 py-1.5 text-left transition duration-200 ease-in-out hover:bg-white/10"
               >
                 <span className="font-medium">{u.role}:</span> {u.email} /{" "}
                 {u.password}
@@ -224,12 +226,19 @@ function LoginForm() {
 
 function AuthFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col bg-ps-dark">
+    <div
+      className="flex min-h-screen flex-col bg-ps-dark"
+      style={{
+        backgroundImage:
+          "linear-gradient(rgb(255 255 255 / 0.01) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.01) 1px, transparent 1px)",
+        backgroundSize: "24px 24px",
+      }}
+    >
       <div className="h-1.5 bg-ps-red" />
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-10">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-10">
         {children}
       </div>
-      <footer className="bg-ps-navy py-3 text-center text-xs text-blue-100">
+      <footer className="border-t border-white/10 bg-ps-navy px-6 py-4 text-center text-xs leading-relaxed text-blue-100">
         © {new Date().getFullYear()} PS Industries — Greater Noida Plant
       </footer>
     </div>
@@ -252,7 +261,10 @@ function friendlyAuthError(message: string): string {
   if (message.includes("auth/popup-closed-by-user")) {
     return "Google sign-in was cancelled.";
   }
-  if (message.includes("Firebase Auth is not ready") || message.includes("Firebase app is not ready")) {
+  if (
+    message.includes("Firebase Auth is not ready") ||
+    message.includes("Firebase app is not ready")
+  ) {
     return "Firebase is still starting. Confirm .env.local values and restart npm run dev.";
   }
   return message;

@@ -5,6 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import POPreviewModal from "@/components/POPreviewModal";
 import Toast from "@/components/Toast";
 import Button from "@/components/Button";
+import StatusBadge from "@/components/StatusBadge";
 import { useAuth } from "@/lib/auth-context";
 import {
   formatINR,
@@ -48,7 +49,6 @@ export default function ApprovalsPage() {
     }
   }, []);
 
-  // Initial load + explicit refresh after approve/reject
   useEffect(() => {
     void loadPending();
   }, [loadPending, refreshKey]);
@@ -93,7 +93,6 @@ export default function ApprovalsPage() {
         throw new Error(data.error || `Approve failed (${res.status})`);
       }
 
-      // Optimistic remove + toast, then re-fetch from Firestore
       setOrders((prev) => prev.filter((po) => po.id !== poId));
       setSelected(null);
       setToast("PO Approved");
@@ -146,7 +145,7 @@ export default function ApprovalsPage() {
   }
 
   return (
-    <div>
+    <div className="ps-section">
       <PageHeader
         title="PO Approvals"
         subtitle="Review new purchase orders from Firestore and approve or reject for production."
@@ -166,25 +165,27 @@ export default function ApprovalsPage() {
       )}
 
       {error && !selected && (
-        <div className="alert-error mb-4" role="alert">
+        <div className="alert-error" role="alert">
           {error}
         </div>
       )}
 
       {loading ? (
-        <p className="text-sm text-ps-gray-500">Loading pending approvals…</p>
+        <p className="text-sm leading-relaxed text-ps-gray-500">
+          Loading pending approvals…
+        </p>
       ) : orders.length === 0 ? (
-        <div className="border border-dashed border-ps-gray-300 bg-white px-6 py-16 text-center">
-          <p className="font-serif text-2xl font-bold text-ps-navy">
+        <div className="rounded-lg border border-dashed border-ps-navy/30 bg-white px-6 py-16 text-center shadow-card">
+          <p className="font-serif text-ps-h2 text-ps-navy">
             No pending approvals
           </p>
-          <p className="mt-2 text-sm text-ps-gray-500">
+          <p className="mt-3 text-sm leading-relaxed text-ps-gray-500">
             New POs uploaded by Accounting will appear here for Plant Head
             review.
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-3">
           {orders.map((po) => (
             <button
               key={po.id}
@@ -193,21 +194,21 @@ export default function ApprovalsPage() {
                 setError(null);
                 setSelected(po);
               }}
-              className="border-l-4 border-ps-red bg-white p-5 text-left shadow-card transition hover:bg-ps-gray-50 focus:outline-none focus:ring-2 focus:ring-ps-navy/30"
+              className="rounded-lg border-l-4 border-ps-red bg-white px-6 py-4 text-left shadow-card transition duration-200 ease-in-out hover:bg-ps-gray-100 hover:shadow-card-hover focus:outline-none focus:ring-2 focus:ring-ps-navy/30"
             >
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-serif text-xl font-bold text-ps-navy">
+              <div className="flex items-start justify-between gap-3">
+                <p className="font-serif text-ps-h2 text-ps-navy">
                   {po.po_number}
                 </p>
-                <span className="rounded bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-800 ring-1 ring-inset ring-amber-200">
-                  {po.status === "new" ? "New" : "Pending"}
-                </span>
+                <StatusBadge
+                  status={po.status === "new" ? "pending" : po.status}
+                />
               </div>
-              <p className="mt-2 text-sm font-medium text-ps-gray-800">
+              <p className="mt-3 text-sm font-medium leading-relaxed text-ps-gray-800">
                 {po.customer_name}
               </p>
               <p className="mt-1 text-xs text-ps-gray-500">{po.customer_code}</p>
-              <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <dl className="mt-4 grid grid-cols-2 gap-4 border-t border-ps-navy/20 pt-4 text-sm leading-relaxed">
                 <div>
                   <dt className="text-xs text-ps-gray-500">Amount</dt>
                   <dd className="font-semibold text-ps-navy">

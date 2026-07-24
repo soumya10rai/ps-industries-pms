@@ -7,15 +7,15 @@ interface DataTableProps {
 
 export default function DataTable({ headers, children }: DataTableProps) {
   return (
-    <div className="overflow-hidden border border-ps-gray-200 bg-white shadow-card">
+    <div className="overflow-hidden rounded-lg border border-ps-gray-200 bg-white shadow-card">
       <div className="overflow-x-auto">
-        <table className="min-w-full text-left text-sm">
+        <table className="min-w-full text-left text-sm leading-relaxed">
           <thead className="bg-ps-navy text-white">
             <tr>
               {headers.map((h) => (
                 <th
                   key={h}
-                  className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide"
+                  className="whitespace-nowrap px-6 py-3.5 text-xs font-semibold uppercase tracking-wide"
                 >
                   {h}
                 </th>
@@ -37,7 +37,11 @@ export function TableRow({
   index?: number;
 }) {
   return (
-    <tr className={index % 2 === 0 ? "bg-white" : "bg-ps-gray-50"}>
+    <tr
+      className={`transition duration-200 ease-in-out hover:bg-ps-gray-100 ${
+        index % 2 === 0 ? "bg-white" : "bg-ps-gray-50/80"
+      }`}
+    >
       {children}
     </tr>
   );
@@ -51,7 +55,9 @@ export function Td({
   className?: string;
 }) {
   return (
-    <td className={`whitespace-nowrap px-4 py-3 text-ps-gray-700 ${className}`}>
+    <td
+      className={`whitespace-nowrap px-6 py-3.5 text-ps-gray-700 ${className}`}
+    >
       {children}
     </td>
   );

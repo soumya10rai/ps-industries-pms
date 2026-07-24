@@ -6,8 +6,9 @@
   --ps-navy: #1e3a8a;
   --ps-dark: #0f2847;
   --ps-red: #dc2626;
-  --background: #f9fafb;
+  --background: #f9fafc;
   --foreground: #111827;
+  --ps-line-height: 1.6;
 }
 
 html,
@@ -17,7 +18,29 @@ body {
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background-color: var(--background);
+  /* Subtle industrial grid at ~1% opacity */
+  background-image:
+    linear-gradient(rgb(30 58 138 / 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(30 58 138 / 0.01) 1px, transparent 1px);
+  background-size: 24px 24px;
+  line-height: var(--ps-line-height);
+}
+
+@layer base {
+  h1,
+  .ps-h1 {
+    @apply font-serif text-ps-h1 text-ps-navy;
+  }
+
+  h2,
+  .ps-h2 {
+    @apply font-serif text-ps-h2 text-ps-navy;
+  }
+
+  p {
+    line-height: 1.6;
+  }
 }
 
 @layer components {
@@ -26,18 +49,46 @@ body {
   }
 
   .field-input {
-    @apply w-full rounded border border-ps-gray-300 bg-white px-3.5 py-2.5 text-sm text-ps-gray-900 outline-none transition placeholder:text-ps-gray-400 focus:border-ps-navy focus:ring-2 focus:ring-ps-navy/20;
+    @apply w-full rounded-lg border border-ps-gray-300 bg-white px-3.5 py-2.5 text-sm text-ps-gray-900 outline-none transition duration-200 ease-in-out placeholder:text-ps-gray-400 focus:border-ps-navy focus:ring-2 focus:ring-ps-navy/20;
+  }
+
+  .field-input-error {
+    @apply border-ps-red focus:border-ps-red focus:ring-ps-red/20;
   }
 
   .btn-primary {
-    @apply inline-flex w-full items-center justify-center gap-2 rounded bg-ps-navy px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#163075] disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-ps-navy px-6 py-2.5 text-sm font-semibold text-white shadow-btn transition duration-200 ease-in-out hover:bg-[#163075] hover:shadow-card-hover disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-ps-navy bg-white px-6 py-2.5 text-sm font-semibold text-ps-navy transition duration-200 ease-in-out hover:bg-ps-gray-50 hover:shadow-btn disabled:cursor-not-allowed disabled:opacity-60;
   }
 
   .alert-error {
-    @apply rounded border border-red-200 bg-red-50 px-3.5 py-3 text-sm text-red-800;
+    @apply rounded-lg border border-red-200 bg-red-50 px-3.5 py-3 text-sm leading-relaxed text-red-800;
   }
 
   .alert-success {
-    @apply rounded border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm text-emerald-800;
+    @apply rounded-lg border border-emerald-200 bg-emerald-50 px-3.5 py-3 text-sm leading-relaxed text-emerald-800;
+  }
+
+  .ps-section {
+    @apply flex flex-col gap-8;
+  }
+
+  .ps-panel {
+    @apply rounded-lg border border-ps-gray-200 bg-white p-6 shadow-card;
+  }
+
+  .ps-divider {
+    @apply border-t border-ps-navy/20;
+  }
+
+  .ps-heading-accent {
+    @apply relative pb-3 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-14 after:bg-ps-navy;
+  }
+
+  .ps-content {
+    @apply bg-ps-surface;
   }
 }

@@ -22,7 +22,7 @@ export default function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen flex-col bg-ps-gray-50">
+    <div className="flex min-h-screen flex-col bg-ps-surface">
       <Navbar
         onMenuToggle={() => setSidebarOpen((v) => !v)}
         serverUser={user}
@@ -34,7 +34,9 @@ export default function AppShell({
           serverRole={user.role}
         />
         <div className="flex min-h-[calc(100vh-3.5rem)] flex-1 flex-col lg:ml-60">
-          <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+          <main className="flex-1 bg-ps-surface px-6 py-4 lg:px-8 lg:py-6">
+            {children}
+          </main>
           <Footer />
         </div>
       </div>

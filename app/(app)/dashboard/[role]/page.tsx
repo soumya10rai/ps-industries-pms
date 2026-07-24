@@ -54,15 +54,12 @@ function RoleDashboard({ role }: { role: UserRole }) {
 
   if (role === "admin") {
     return (
-      <div>
+      <div className="ps-section">
         <PageHeader
           title={title}
           subtitle="Full plant control — users, approvals, inventory, and production."
           actions={
-            <Link
-              href="/admin/dashboard"
-              className="rounded bg-ps-navy px-4 py-2 text-sm font-semibold text-white"
-            >
+            <Link href="/admin/dashboard" className="btn-primary">
               Admin Overview
             </Link>
           }
@@ -74,20 +71,17 @@ function RoleDashboard({ role }: { role: UserRole }) {
 
   if (role === "accountant") {
     return (
-      <div>
+      <div className="ps-section">
         <PageHeader
           title={title}
           subtitle="Upload, validate, and track purchase orders for the plant."
           actions={
-            <Link
-              href={home}
-              className="rounded bg-ps-navy px-4 py-2 text-sm font-semibold text-white"
-            >
+            <Link href={home} className="btn-primary">
               Open PO List
             </Link>
           }
         />
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-3">
           <KPICard
             label="PO Value"
             value={formatINR(
@@ -113,20 +107,17 @@ function RoleDashboard({ role }: { role: UserRole }) {
 
   if (role === "plant_head") {
     return (
-      <div>
+      <div className="ps-section">
         <PageHeader
           title={title}
           subtitle="Approve purchase orders and verify material readiness."
           actions={
-            <Link
-              href="/plant-head/approvals"
-              className="rounded bg-ps-navy px-4 py-2 text-sm font-semibold text-white"
-            >
+            <Link href="/plant-head/approvals" className="btn-primary">
               Review Approvals
             </Link>
           }
         />
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-3">
           <KPICard
             label="Pending Approvals"
             value={MOCK_POS.filter((p) => p.status === "pending").length}
@@ -152,20 +143,17 @@ function RoleDashboard({ role }: { role: UserRole }) {
 
   if (role === "store_manager") {
     return (
-      <div>
+      <div className="ps-section">
         <PageHeader
           title={title}
           subtitle="Monitor stock levels and fulfill material requests."
           actions={
-            <Link
-              href="/store/inventory"
-              className="rounded bg-ps-navy px-4 py-2 text-sm font-semibold text-white"
-            >
+            <Link href="/store/inventory" className="btn-primary">
               Open Inventory
             </Link>
           }
         />
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-3">
           <KPICard label="SKUs" value={MOCK_INVENTORY.length} />
           <KPICard
             label="Low Stock"
@@ -183,20 +171,17 @@ function RoleDashboard({ role }: { role: UserRole }) {
   }
 
   return (
-    <div>
+    <div className="ps-section">
       <PageHeader
         title={title}
         subtitle="Schedule and track injection moulding production runs."
         actions={
-          <Link
-            href="/production/runs"
-            className="rounded bg-ps-navy px-4 py-2 text-sm font-semibold text-white"
-          >
+          <Link href="/production/runs" className="btn-primary">
             View Runs
           </Link>
         }
       />
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-8 sm:grid-cols-3">
         <KPICard
           label="Running"
           value={MOCK_PRODUCTION_RUNS.filter((r) => r.status === "running").length}
@@ -220,7 +205,7 @@ function RoleDashboard({ role }: { role: UserRole }) {
 
 function AdminKPIs() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">
       <KPICard
         label="Total PO Value"
         value={formatINR(MOCK_POS.reduce((s, p) => s + p.total_amount, 0))}
@@ -234,8 +219,8 @@ function AdminKPIs() {
 
 function POMiniTable() {
   return (
-    <section className="mt-8">
-      <h2 className="mb-3 font-serif text-xl font-bold text-ps-navy">
+    <section>
+      <h2 className="ps-heading-accent mb-4 font-serif text-ps-h2 text-ps-navy">
         Purchase Orders
       </h2>
       <DataTable headers={["PO", "Customer", "Total", "Status"]}>
