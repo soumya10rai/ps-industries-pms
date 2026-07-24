@@ -74,6 +74,18 @@ const MAIN_NAV: NavItem[] = [
     roles: ["admin", "accountant"],
   },
   {
+    label: "Approvals",
+    href: "/plant-head/approvals",
+    icon: "check",
+    roles: ["admin", "plant_head"],
+  },
+  {
+    label: "Material Check",
+    href: "/plant-head/material-check",
+    icon: "box",
+    roles: ["admin", "plant_head", "store_manager"],
+  },
+  {
     label: "Surveillance",
     href: "/plant-head/approvals",
     icon: "eye",
