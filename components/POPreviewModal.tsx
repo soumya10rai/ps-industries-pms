@@ -7,6 +7,7 @@ import { formatINR, type PurchaseOrder } from "@/lib/types";
 interface POPreviewModalProps {
   po: PurchaseOrder;
   busy?: boolean;
+  error?: string | null;
   onApprove: (notes: string) => void | Promise<void>;
   onReject: (notes: string) => void | Promise<void>;
   onCancel: () => void;
@@ -15,6 +16,7 @@ interface POPreviewModalProps {
 export default function POPreviewModal({
   po,
   busy = false,
+  error = null,
   onApprove,
   onReject,
   onCancel,
@@ -147,9 +149,9 @@ export default function POPreviewModal({
             />
           </div>
 
-          {localError && (
+          {(localError || error) && (
             <div className="alert-error mt-4" role="alert">
-              {localError}
+              {localError || error}
             </div>
           )}
 

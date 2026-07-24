@@ -20,14 +20,16 @@ export default function ApprovalsPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-
-  const currentUid = user?.uid || profile?.uid || "";
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const loadPending = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/po/list?status=new", { cache: "no-store" });
+      const res = await fetch("/api/po/list?status=new", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || "Failed to load pending POs.");
@@ -35,45 +37,67 @@ export default function ApprovalsPage() {
       const list = Array.isArray(data.orders)
         ? (data.orders as PurchaseOrder[])
         : [];
-      // Only show POs that still await approval (from Firestore)
       setOrders(list.filter((po) => isAwaitingApproval(po.status)));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load approvals."
       );
+      setOrders([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // Initial load + explicit refresh after approve/reject
   useEffect(() => {
     void loadPending();
-  }, [loadPending]);
+  }, [loadPending, refreshKey]);
+
+  async function resolveCurrentUid(): Promise<string> {
+    if (user?.uid) return user.uid;
+    if (profile?.uid) return profile.uid;
+    try {
+      const res = await fetch("/api/auth/session", {
+        credentials: "same-origin",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return String(data?.user?.uid || "");
+      }
+    } catch {
+      // ignore
+    }
+    return "";
+  }
 
   async function handleApprove(notes: string) {
     if (!selected) return;
     setBusy(true);
     setError(null);
     const poId = selected.id;
+    const approvedBy = await resolveCurrentUid();
+
     try {
       const res = await fetch("/api/po/approve", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           po_id: poId,
-          approved_by: currentUid,
-          notes: notes || undefined,
+          approved_by: approvedBy,
+          notes: notes.trim() || undefined,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Approve failed");
+        throw new Error(data.error || `Approve failed (${res.status})`);
       }
 
+      // Optimistic remove + toast, then re-fetch from Firestore
+      setOrders((prev) => prev.filter((po) => po.id !== poId));
       setSelected(null);
       setToast("PO Approved");
-      // Refresh from Firestore so the card stays gone after reload
-      await loadPending();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Approve failed");
     } finally {
@@ -83,7 +107,8 @@ export default function ApprovalsPage() {
 
   async function handleReject(notes: string) {
     if (!selected) return;
-    if (!notes.trim()) {
+    const reason = notes.trim();
+    if (!reason) {
       setError("Notes are required to reject a purchase order.");
       return;
     }
@@ -91,24 +116,28 @@ export default function ApprovalsPage() {
     setBusy(true);
     setError(null);
     const poId = selected.id;
+    const approvedBy = await resolveCurrentUid();
+
     try {
       const res = await fetch("/api/po/reject", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           po_id: poId,
-          rejection_reason: notes.trim(),
-          approved_by: currentUid,
+          rejection_reason: reason,
+          approved_by: approvedBy,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Reject failed");
+        throw new Error(data.error || `Reject failed (${res.status})`);
       }
 
+      setOrders((prev) => prev.filter((po) => po.id !== poId));
       setSelected(null);
       setToast("PO Rejected");
-      await loadPending();
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Reject failed");
     } finally {
@@ -124,7 +153,7 @@ export default function ApprovalsPage() {
         actions={
           <Button
             variant="secondary"
-            onClick={() => void loadPending()}
+            onClick={() => setRefreshKey((k) => k + 1)}
             disabled={loading || busy}
           >
             Refresh
@@ -136,7 +165,7 @@ export default function ApprovalsPage() {
         <Toast message={toast} type="success" onClose={() => setToast(null)} />
       )}
 
-      {error && (
+      {error && !selected && (
         <div className="alert-error mb-4" role="alert">
           {error}
         </div>
@@ -203,10 +232,14 @@ export default function ApprovalsPage() {
         <POPreviewModal
           po={selected}
           busy={busy}
+          error={error}
           onApprove={handleApprove}
           onReject={handleReject}
           onCancel={() => {
-            if (!busy) setSelected(null);
+            if (!busy) {
+              setSelected(null);
+              setError(null);
+            }
           }}
         />
       )}

@@ -10,11 +10,11 @@ import { isAwaitingApproval } from "@/lib/types";
 
 /**
  * POST /api/po/reject
- * Body: { po_id | id, rejection_reason | reason | notes }
+ * Body: { po_id, rejection_reason, approved_by? }
  *
- * Updates Firestore /po_uploads/{po_id}:
- *   status → "rejected"
- *   rejection_reason → notes text
+ * Firestore /po_uploads/{po_id}:
+ *   status = "rejected"
+ *   rejection_reason = notes
  */
 export default async function handler(
   req: NextApiRequest,
@@ -52,7 +52,7 @@ export default async function handler(
     const existing = await loadPOFromFirestore(poId);
     if (!existing) {
       return res.status(404).json({
-        error: `Purchase order not found in Firestore for id "${poId}".`,
+        error: `Purchase order not found in Firestore for id "${poId}". Upload/save the PO first.`,
       });
     }
 
@@ -67,18 +67,27 @@ export default async function handler(
       "unknown"
     );
 
-    await getAdminDb()
-      .collection("po_uploads")
-      .doc(existing.id)
-      .update({
+    const ref = getAdminDb().collection("po_uploads").doc(existing.id);
+
+    await ref.set(
+      {
         status: "rejected",
         rejection_reason: reason,
         notes: reason,
-        rejected_by: actor.uid,
-        approved_by: actor.uid,
+        rejected_by: actor.uid !== "unknown" ? actor.uid : null,
+        approved_by: actor.uid !== "unknown" ? actor.uid : null,
         approved_at: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    const verify = await ref.get();
+    if (verify.data()?.status !== "rejected") {
+      return res.status(500).json({
+        error: "Firestore write verification failed.",
       });
+    }
 
     const rejected = {
       ...existing,

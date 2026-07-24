@@ -10,12 +10,12 @@ import { isAwaitingApproval } from "@/lib/types";
 
 /**
  * POST /api/po/approve
- * Body: { po_id | id, approved_by?: uid, notes? }
+ * Body: { po_id, approved_by: uid, notes? }
  *
- * Updates Firestore /po_uploads/{po_id}:
- *   status → "approved"
- *   approved_by → user UID
- *   approved_at → server timestamp
+ * Firestore /po_uploads/{po_id}:
+ *   status = "approved"
+ *   approved_by = uid
+ *   approved_at = server timestamp
  */
 export default async function handler(
   req: NextApiRequest,
@@ -42,7 +42,7 @@ export default async function handler(
     const existing = await loadPOFromFirestore(poId);
     if (!existing) {
       return res.status(404).json({
-        error: `Purchase order not found in Firestore for id "${poId}".`,
+        error: `Purchase order not found in Firestore for id "${poId}". Upload/save the PO first.`,
       });
     }
 
@@ -56,21 +56,36 @@ export default async function handler(
       { body: body as Record<string, unknown>, headers: req.headers },
       "unknown"
     );
+    if (!actor.uid || actor.uid === "unknown") {
+      return res.status(401).json({
+        error: "Missing approved_by user id. Sign in again and retry.",
+      });
+    }
 
     const notes = String(body.notes || "").trim();
+    const ref = getAdminDb().collection("po_uploads").doc(existing.id);
 
-    await getAdminDb()
-      .collection("po_uploads")
-      .doc(existing.id)
-      .update({
+    await ref.set(
+      {
         status: "approved",
         approved_by: actor.uid,
-        approved_by_email: actor.email || null,
+        approved_by_email: actor.email !== "unknown" ? actor.email : null,
         approved_at: FieldValue.serverTimestamp(),
         rejection_reason: FieldValue.delete(),
         notes: notes || null,
         updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // Verify write landed
+    const verify = await ref.get();
+    const savedStatus = verify.data()?.status;
+    if (savedStatus !== "approved") {
+      return res.status(500).json({
+        error: `Firestore write verification failed (status=${savedStatus}).`,
       });
+    }
 
     const approved = {
       ...existing,
