@@ -27,58 +27,136 @@ import {
   type UserRole,
 } from "@/lib/types";
 
+/**
+ * IMPORTANT (Next.js):
+ * Only STATIC `process.env.NEXT_PUBLIC_*` references are inlined into the
+ * browser bundle. Dynamic access like `process.env[key]` is ALWAYS undefined
+ * on the client — that was causing false "Firebase is not configured" errors.
+ */
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? "",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? "",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? "",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? "",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? "",
 };
 
-function assertClientConfig(): void {
-  const required = [
-    "NEXT_PUBLIC_FIREBASE_API_KEY",
-    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-    "NEXT_PUBLIC_FIREBASE_APP_ID",
-  ] as const;
+/** Live exports — safe to import; populated after successful client init. */
+export let auth: Auth | null = null;
+export let db: Firestore | null = null;
 
-  for (const key of required) {
-    if (!process.env[key]) {
-      throw new Error(
-        `Missing Firebase config: ${key}. Copy .env.example to .env.local and fill in your project values.`
+let app: FirebaseApp | undefined;
+let loggedMissing = false;
+let loggedReady = false;
+
+function getMissingEnvVars(): string[] {
+  const checks: Array<[string, string]> = [
+    ["NEXT_PUBLIC_FIREBASE_API_KEY", firebaseConfig.apiKey],
+    ["NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN", firebaseConfig.authDomain],
+    ["NEXT_PUBLIC_FIREBASE_PROJECT_ID", firebaseConfig.projectId],
+    ["NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET", firebaseConfig.storageBucket],
+    [
+      "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
+      firebaseConfig.messagingSenderId,
+    ],
+    ["NEXT_PUBLIC_FIREBASE_APP_ID", firebaseConfig.appId],
+  ];
+
+  return checks.filter(([, value]) => !value.trim()).map(([key]) => key);
+}
+
+export function isFirebaseConfigured(): boolean {
+  return getMissingEnvVars().length === 0;
+}
+
+/**
+ * Initialize Firebase on the client when all env vars are present.
+ * Logs missing keys instead of throwing a hard "not configured" error.
+ */
+function ensureInitialized(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  if (app && auth && db) {
+    return true;
+  }
+
+  const missing = getMissingEnvVars();
+  if (missing.length > 0) {
+    if (!loggedMissing) {
+      console.warn(
+        `[firebase] Missing env vars: ${missing.join(
+          ", "
+        )}. Add them to .env.local and restart npm run dev.`
       );
+      loggedMissing = true;
     }
+    return false;
+  }
+
+  try {
+    app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+
+    if (!loggedReady) {
+      console.info(
+        `[firebase] Ready — project "${firebaseConfig.projectId}".`
+      );
+      loggedReady = true;
+    }
+    return true;
+  } catch (err) {
+    console.error("[firebase] Initialization failed:", err);
+    return false;
   }
 }
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: Firestore | undefined;
+// Eager init in the browser so `auth` / `db` are available after import.
+if (typeof window !== "undefined") {
+  ensureInitialized();
+}
 
 export function getFirebaseApp(): FirebaseApp {
-  if (typeof window === "undefined") {
-    throw new Error("Firebase client SDK must only be used in the browser.");
-  }
+  ensureInitialized();
   if (!app) {
-    assertClientConfig();
-    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    throw new Error(
+      "Firebase app is not ready. Check NEXT_PUBLIC_FIREBASE_* in .env.local and restart the dev server."
+    );
   }
   return app;
 }
 
 export function getFirebaseAuth(): Auth {
+  ensureInitialized();
   if (!auth) {
-    auth = getAuth(getFirebaseApp());
+    throw new Error(
+      "Firebase Auth is not ready. Check NEXT_PUBLIC_FIREBASE_* in .env.local and restart the dev server."
+    );
   }
   return auth;
 }
 
 export function getFirebaseDb(): Firestore {
+  ensureInitialized();
   if (!db) {
-    db = getFirestore(getFirebaseApp());
+    throw new Error(
+      "Firebase Firestore is not ready. Check NEXT_PUBLIC_FIREBASE_* in .env.local and restart the dev server."
+    );
   }
+  return db;
+}
+
+/** Soft accessors — never throw. */
+export function tryGetAuth(): Auth | null {
+  ensureInitialized();
+  return auth;
+}
+
+export function tryGetDb(): Firestore | null {
+  ensureInitialized();
   return db;
 }
 
@@ -177,13 +255,18 @@ export async function signInWithGoogle(): Promise<AuthResult> {
 }
 
 export async function logout(): Promise<void> {
-  await signOut(getFirebaseAuth());
+  const instance = tryGetAuth();
+  if (instance) {
+    await signOut(instance);
+  }
 }
 
 export function getCurrentUser(): Promise<User | null> {
-  const authInstance = getFirebaseAuth();
+  const authRef = tryGetAuth();
+  if (!authRef) return Promise.resolve(null);
+
   return new Promise((resolve) => {
-    const unsubscribe = onAuthStateChanged(authInstance, (user) => {
+    const unsubscribe = onAuthStateChanged(authRef, (user) => {
       unsubscribe();
       resolve(user);
     });

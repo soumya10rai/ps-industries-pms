@@ -252,8 +252,8 @@ function friendlyAuthError(message: string): string {
   if (message.includes("auth/popup-closed-by-user")) {
     return "Google sign-in was cancelled.";
   }
-  if (message.includes("Missing Firebase config")) {
-    return "Firebase is not configured. Add credentials to .env.local.";
+  if (message.includes("Firebase Auth is not ready") || message.includes("Firebase app is not ready")) {
+    return "Firebase is still starting. Confirm .env.local values and restart npm run dev.";
   }
   return message;
 }

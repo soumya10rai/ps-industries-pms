@@ -15,6 +15,7 @@ import {
   getUserProfile,
   logout as firebaseLogout,
   onAuthStateChanged,
+  tryGetAuth,
   type User,
 } from "@/lib/firebase";
 import { getHomeForRole } from "@/lib/auth";
@@ -57,19 +58,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let unsub = () => {};
-    try {
-      unsub = onAuthStateChanged(getFirebaseAuth(), async (nextUser) => {
-        setUser(nextUser);
-        if (nextUser) {
-          await loadProfile(nextUser.uid);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
-      });
-    } catch {
+
+    const authRef = tryGetAuth();
+    if (!authRef) {
       setLoading(false);
+      return () => unsub();
     }
+
+    unsub = onAuthStateChanged(authRef, async (nextUser) => {
+      setUser(nextUser);
+      if (nextUser) {
+        await loadProfile(nextUser.uid);
+      } else {
+        setProfile(null);
+      }
+      setLoading(false);
+    });
+
     return () => unsub();
   }, [loadProfile]);
 
