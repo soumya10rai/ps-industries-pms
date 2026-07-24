@@ -1,13 +1,9 @@
 import Link from "next/link";
-import KPICard from "@/components/KPICard";
+import DashboardKPICards from "@/components/DashboardKPICards";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import DataTable, { TableRow, Td } from "@/components/DataTable";
-import {
-  MOCK_INVENTORY,
-  MOCK_POS,
-  MOCK_PRODUCTION_RUNS,
-} from "@/lib/mock-data";
+import { MOCK_POS } from "@/lib/mock-data";
 import { formatINR } from "@/lib/types";
 
 export default function AdminDashboardPage() {
@@ -34,32 +30,7 @@ export default function AdminDashboardPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KPICard
-          label="PO Pipeline"
-          value={formatINR(MOCK_POS.reduce((s, p) => s + p.total_amount, 0))}
-          description="BMR + Kent + Prem"
-        />
-        <KPICard
-          label="Users (sample)"
-          value={5}
-          description="Admin, Plant, Acc, Store, Prod"
-        />
-        <KPICard
-          label="Low Stock"
-          value={
-            MOCK_INVENTORY.filter((i) => i.quantity <= i.reorder_level).length
-          }
-          description="Requires store action"
-        />
-        <KPICard
-          label="Machines Busy"
-          value={
-            MOCK_PRODUCTION_RUNS.filter((r) => r.status === "running").length
-          }
-          description="Active IMM lines"
-        />
-      </div>
+      <DashboardKPICards />
 
       <section className="mt-8">
         <h2 className="mb-3 font-serif text-xl font-bold text-ps-navy">

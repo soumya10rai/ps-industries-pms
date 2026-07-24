@@ -1,5 +1,5 @@
 import Link from "next/link";
-import KPICard from "@/components/KPICard";
+import DashboardKPICards from "@/components/DashboardKPICards";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import DataTable, { TableRow, Td } from "@/components/DataTable";
@@ -7,15 +7,6 @@ import { MOCK_POS, MOCK_INVENTORY, MOCK_PRODUCTION_RUNS } from "@/lib/mock-data"
 import { formatINR } from "@/lib/types";
 
 export default function DashboardPage() {
-  const totalPOValue = MOCK_POS.reduce((s, p) => s + p.total_amount, 0);
-  const pendingCount = MOCK_POS.filter((p) => p.status === "pending").length;
-  const lowStock = MOCK_INVENTORY.filter(
-    (i) => i.quantity <= i.reorder_level
-  ).length;
-  const activeRuns = MOCK_PRODUCTION_RUNS.filter(
-    (r) => r.status === "running"
-  ).length;
-
   return (
     <div>
       <PageHeader
@@ -31,28 +22,7 @@ export default function DashboardPage() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KPICard
-          label="Open PO Value"
-          value={formatINR(totalPOValue)}
-          description="Across 3 active purchase orders"
-        />
-        <KPICard
-          label="Pending Approvals"
-          value={pendingCount}
-          description="Awaiting Plant Head review"
-        />
-        <KPICard
-          label="Low Stock SKUs"
-          value={lowStock}
-          description="At or below reorder level"
-        />
-        <KPICard
-          label="Active Runs"
-          value={activeRuns}
-          description="Machines currently producing"
-        />
-      </div>
+      <DashboardKPICards />
 
       <section className="mt-8">
         <div className="mb-3 flex items-center justify-between">
