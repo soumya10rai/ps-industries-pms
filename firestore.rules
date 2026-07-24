@@ -14,31 +14,47 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isAdmin() {
+    function isApproved() {
       return signedIn()
-        && userDoc().keys().hasAny(['role'])
-        && userDoc().role == 'admin'
+        && userDoc().keys().hasAny(['approved'])
         && userDoc().approved == true;
+    }
+
+    function isAdmin() {
+      return isApproved() && userDoc().role == 'admin';
+    }
+
+    function isAccountant() {
+      return isApproved() && userDoc().role == 'accountant';
+    }
+
+    function isPlantHead() {
+      return isApproved() && userDoc().role == 'plant_head';
     }
 
     // /users/{uid} — role field is the authorization source of truth
     match /users/{uid} {
-      // Users can read their own profile; admins can read all
       allow read: if isSelf(uid) || isAdmin();
 
-      // New users may create their own profile without a privileged role
       allow create: if isSelf(uid)
         && request.resource.data.email == request.auth.token.email
         && request.resource.data.role == null
         && request.resource.data.approved == false;
 
-      // Only admins may change role / approved (or use Admin SDK / seed API)
       allow update: if isAdmin()
         || (isSelf(uid)
             && !request.resource.data.diff(resource.data).affectedKeys()
                 .hasAny(['role', 'approved']));
 
       allow delete: if isAdmin();
+    }
+
+    // /po_uploads/{id} — written by Admin SDK from /api/po/save;
+    // client rules allow approved plant roles to read for dashboards.
+    match /po_uploads/{poId} {
+      allow read: if isAdmin() || isAccountant() || isPlantHead();
+      // Writes go through Firebase Admin SDK (API routes) — deny client writes
+      allow write: if false;
     }
   }
 }
