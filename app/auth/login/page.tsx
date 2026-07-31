@@ -57,7 +57,11 @@ function LoginForm() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const successMessage =
-    message === "password_set" ? "Password set! You can sign in now." : null;
+    message === "password_set"
+      ? "Password set! You can sign in now."
+      : message === "password_reset"
+        ? "Password updated! You can sign in now."
+        : null;
 
   const domainHint = useMemo(
     () => ALLOWED_EMAIL_DOMAINS.map((d) => `@${d}`).join(" or "),
@@ -180,6 +184,14 @@ function LoginForm() {
               className={`field-input ${error ? "field-input-error" : ""}`}
               placeholder="••••••••"
             />
+            <p className="mt-2 text-right text-sm">
+              <Link
+                href="/auth/forgot-password"
+                className="font-semibold text-ps-navy transition duration-200 ease-in-out hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </p>
           </div>
 
           <button type="submit" className="btn-primary w-full" disabled={loading}>
