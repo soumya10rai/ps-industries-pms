@@ -7,19 +7,14 @@ import {
 } from "@/lib/po-firestore";
 import { upsertPO } from "@/lib/mock-data";
 import { isAwaitingApproval } from "@/lib/types";
-import { calculatePOMaterialsLive } from "@/lib/material-calc-live";
-import {
-  issueStock,
-  listActiveRawMaterials,
-  resolveMaterialCode,
-} from "@/lib/inventory";
+import { calculatePORequirementsFromParts } from "@/lib/material-calc-live";
+import { issueStock, listActiveRawMaterials } from "@/lib/inventory";
 
 /**
  * POST /api/po/approve
  * Body: { po_id, approved_by: uid, notes?, skip_stock_check?, plant? }
  *
- * On approval with sufficient stock: auto-deduct materials and log movements.
- * On shortfall: do not approve or deduct; return shortfall list.
+ * Looks up each item in /parts → material_code + weight, then deducts stock.
  */
 export default async function handler(
   req: NextApiRequest,
@@ -68,25 +63,42 @@ export default async function handler(
       });
     }
 
-    const plant = String(body.plant || "Noida A-06").trim();
+    const plant = String(
+      body.plant || existing.plant || "Noida A-06"
+    ).trim();
     const skipStock = body.skip_stock_check === true;
 
-    // Only gate / deduct when inventory has been loaded into Firestore
     const inventoryLoaded = (await listActiveRawMaterials()).length > 0;
-    const materialCheck = inventoryLoaded
-      ? await calculatePOMaterialsLive(existing)
+    const requirements = inventoryLoaded
+      ? await calculatePORequirementsFromParts(existing)
       : null;
 
-    if (
-      !skipStock &&
-      materialCheck &&
-      !materialCheck.all_stock_available
-    ) {
-      return res.status(400).json({
-        error: "Material shortfall — stock not deducted and PO not approved.",
-        shortfalls: materialCheck.lines.filter((l) => l.status === "shortfall"),
-        check: materialCheck,
-      });
+    if (!skipStock && requirements) {
+      if (requirements.missingParts.length > 0) {
+        const detail = requirements.missingParts
+          .map((c) => `item ${c} not found in parts master`)
+          .join("; ");
+        return res.status(400).json({
+          error: `Cannot approve — ${detail}.`,
+          missingParts: requirements.missingParts,
+          requirements,
+        });
+      }
+
+      if (requirements.shortfalls.length > 0) {
+        const detail = requirements.shortfalls
+          .map((s) =>
+            s.status === "missing_material"
+              ? `${s.itemCode}: material ${s.materialCode} not in inventory`
+              : `${s.itemCode} needs ${s.shortfallKg}kg more of ${s.materialCode}`
+          )
+          .join(", ");
+        return res.status(400).json({
+          error: `Material shortfall — stock not deducted and PO not approved: ${detail}.`,
+          shortfalls: requirements.shortfalls,
+          requirements,
+        });
+      }
     }
 
     const notes = String(body.notes || "").trim();
@@ -113,8 +125,8 @@ export default async function handler(
       });
     }
 
-    // Auto-deduct stock for each OK line when inventory is in use
     const deductions: Array<{
+      itemCode: string;
       material: string;
       materialCode: string;
       quantityKg: number;
@@ -122,46 +134,49 @@ export default async function handler(
     }> = [];
     const deductionErrors: string[] = [];
 
-    if (!skipStock && materialCheck) {
-      for (const line of materialCheck.lines) {
-        if (line.required_kg <= 0) continue;
+    if (!skipStock && requirements) {
+      // Aggregate by material code so we issue once per material
+      const byMaterial = new Map<
+        string,
+        { materialCode: string; materialName: string; kg: number; items: string[] }
+      >();
 
-        let code = line.material_code;
-        let name = line.material;
-        if (!code) {
-          const resolved = await resolveMaterialCode(line.material);
-          if (!resolved) {
-            deductionErrors.push(
-              `No inventory match for material "${line.material}".`
-            );
-            continue;
-          }
-          code = resolved.materialCode;
-          name = resolved.materialName;
-        }
+      for (const line of requirements.lines) {
+        if (line.requiredKg <= 0 || !line.materialCode) continue;
+        const prev = byMaterial.get(line.materialCode) || {
+          materialCode: line.materialCode,
+          materialName: line.materialName,
+          kg: 0,
+          items: [] as string[],
+        };
+        prev.kg = Number((prev.kg + line.requiredKg).toFixed(3));
+        prev.items.push(line.itemCode);
+        byMaterial.set(line.materialCode, prev);
+      }
 
+      for (const entry of Array.from(byMaterial.values())) {
         try {
           const result = await issueStock({
-            materialCode: code,
-            quantityKg: line.required_kg,
+            materialCode: entry.materialCode,
+            quantityKg: entry.kg,
             reason: `PO Approval: ${existing.po_number}`,
             referenceId: existing.id,
             plant,
             uid: actor.uid,
           });
           deductions.push({
-            material: name,
-            materialCode: code,
-            quantityKg: line.required_kg,
+            itemCode: entry.items.join(","),
+            material: entry.materialName,
+            materialCode: entry.materialCode,
+            quantityKg: entry.kg,
             movementId: result.movement.movementId,
           });
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Deduction failed";
-          deductionErrors.push(`${code}: ${msg}`);
+          deductionErrors.push(`${entry.materialCode}: ${msg}`);
         }
       }
 
-      // If any deduction failed after approval, surface partial failure
       if (deductionErrors.length > 0 && deductions.length === 0) {
         return res.status(500).json({
           error: "PO approved but stock deduction failed.",
@@ -180,23 +195,24 @@ export default async function handler(
     };
     upsertPO(approved);
 
-    const deductionSummary =
-      deductions.length > 0
-        ? deductions
-            .map((d) => `${d.quantityKg} kg of ${d.material}`)
-            .join(", ")
-        : null;
+    let message = "PO approved.";
+    if (deductions.length > 0) {
+      const detail = deductions
+        .map((d) => `${d.quantityKg}kg of ${d.materialCode}`)
+        .join(", ");
+      message = `PO approved. Deducted ${detail} from stock.`;
+    } else if (deductionErrors.length > 0) {
+      message = `PO approved but ${deductionErrors.length} deduction(s) failed.`;
+    }
 
     return res.status(200).json({
       ok: true,
       po: approved,
       firestorePath: `po_uploads/${existing.id}`,
-      message: deductionSummary
-        ? `Approved. Deducted ${deductionSummary} from stock.`
-        : "PO Approved",
+      message,
       deductions,
       deductionErrors: deductionErrors.length ? deductionErrors : undefined,
-      materialCheck,
+      requirements,
     });
   } catch (err) {
     console.error("[po/approve]", err);

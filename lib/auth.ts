@@ -55,7 +55,8 @@ export function isJsonApiPath(pathname: string): boolean {
     pathname.startsWith("/api/material-calc") ||
     pathname.startsWith("/api/production") ||
     pathname.startsWith("/api/admin") ||
-    pathname.startsWith("/api/inventory")
+    pathname.startsWith("/api/inventory") ||
+    pathname.startsWith("/api/setup")
   );
 }
 

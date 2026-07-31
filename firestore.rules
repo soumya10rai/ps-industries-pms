@@ -80,5 +80,16 @@ service cloud.firestore {
       allow read: if canReadInventory();
       allow write: if false;
     }
+
+    // Parts / customers masters — Admin SDK writes; approved roles may read.
+    match /parts/{itemCode} {
+      allow read: if isAdmin() || isAccountant() || isPlantHead() || isStoreManager();
+      allow write: if false;
+    }
+
+    match /customers/{code} {
+      allow read: if isAdmin() || isAccountant() || isPlantHead();
+      allow write: if false;
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
 } from "firebase-admin/app";
 import { getAuth, type Auth } from "firebase-admin/auth";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getStorage, type Storage } from "firebase-admin/storage";
 
 let adminApp: App | undefined;
 
@@ -29,6 +30,14 @@ function buildCredential(): ServiceAccount | undefined {
   };
 }
 
+function storageBucketName(): string | undefined {
+  return (
+    process.env.FIREBASE_ADMIN_STORAGE_BUCKET ||
+    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+    undefined
+  );
+}
+
 export function getAdminApp(): App {
   if (adminApp) return adminApp;
 
@@ -47,6 +56,7 @@ export function getAdminApp(): App {
   adminApp = initializeApp({
     credential: cert(serviceAccount),
     projectId: serviceAccount.projectId,
+    storageBucket: storageBucketName(),
   });
 
   return adminApp;
@@ -58,6 +68,10 @@ export function getAdminAuth(): Auth {
 
 export function getAdminDb(): Firestore {
   return getFirestore(getAdminApp());
+}
+
+export function getAdminStorage(): Storage {
+  return getStorage(getAdminApp());
 }
 
 /**

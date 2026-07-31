@@ -58,17 +58,35 @@ export const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 export const SESSION_REFRESH_THRESHOLD_SECONDS = 60 * 60 * 6;
 
 export type POStatus =
+  | "draft"
   | "new"
   | "pending"
   | "approved"
   | "rejected"
   | "in_production"
+  | "dispatched"
   | "completed"
   | "material_check";
 
 /** Statuses that await Plant Head action. */
 export function isAwaitingApproval(status: string | undefined): boolean {
   return status === "new" || status === "pending";
+}
+
+/** Submitted (non-draft) statuses shown on the accountant Submitted tab. */
+export const PO_SUBMITTED_STATUSES: POStatus[] = [
+  "new",
+  "pending",
+  "approved",
+  "rejected",
+  "in_production",
+  "dispatched",
+  "completed",
+  "material_check",
+];
+
+export function isDraftStatus(status: string | undefined): boolean {
+  return status === "draft";
 }
 
 export interface SessionPayload {
@@ -94,9 +112,20 @@ export interface POItem {
   item_code: string;
   description: string;
   part_code: string | null;
+  /** HSN/SAC code — required on new manual POs. */
+  hsn_code?: string;
   quantity: number;
   uom: string;
   rate: number;
+  /** Pre-tax line amount (qty × rate). Falls back to `total` on legacy POs. */
+  sub_total?: number;
+  cgst_percent?: number;
+  cgst_amount?: number;
+  sgst_percent?: number;
+  sgst_amount?: number;
+  igst_percent?: number;
+  igst_amount?: number;
+  /** Line total including tax (or legacy pre-tax total). */
   total: number;
   material_grade: string | null;
   colour: string | null;
@@ -111,9 +140,22 @@ export interface PurchaseOrder {
   delivery_date: string | null;
   payment_terms: string;
   items: POItem[];
+  /** Alias for grand_total (backwards compat). */
   total_amount: number;
+  /** Sum of item sub_totals (pre-tax). */
+  sub_total?: number;
+  total_cgst?: number;
+  total_sgst?: number;
+  total_igst?: number;
+  total_tax?: number;
+  /** Final payable = sub_total + total_tax. */
+  grand_total?: number;
+  /** When true, IGST was applied instead of CGST+SGST. */
+  interstate?: boolean;
   gst: string;
   status: POStatus;
+  plant?: string;
+  pdf_url?: string | null;
   parse_source?: string;
   source_file?: string;
   uploaded_by?: string;
@@ -122,6 +164,35 @@ export interface PurchaseOrder {
   approved_at?: string;
   rejection_reason?: string;
 }
+
+/** Parts master document — Firestore `parts/{itemCode}`. */
+export interface PartMaster {
+  itemCode: string;
+  description: string;
+  customerCode: string;
+  customerName: string;
+  weightGrams: number;
+  materialCode: string;
+  scrapPercent: number;
+  /** Default HSN/SAC for PO entry auto-fill. */
+  defaultHsnCode: string;
+  isActive: boolean;
+}
+
+/** Customer master document — Firestore `customers/{code}`. */
+export interface CustomerMaster {
+  code: string;
+  name: string;
+  isActive: boolean;
+}
+
+export const DEFAULT_CUSTOMERS: CustomerMaster[] = [
+  { code: "KENT", name: "Kent RO Systems", isActive: true },
+  { code: "BMR", name: "BMR HVAC", isActive: true },
+  { code: "HAIER", name: "Haier", isActive: true },
+  { code: "VEIRA", name: "Veira", isActive: true },
+  { code: "PREM", name: "Prem Industries", isActive: true },
+];
 
 export interface InventoryItem {
   id: string;

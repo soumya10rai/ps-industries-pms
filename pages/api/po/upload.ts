@@ -1,123 +1,81 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { MOCK_POS } from "@/lib/mock-data";
-import type { PurchaseOrder } from "@/lib/types";
+import { uploadPoPdf } from "@/lib/storage";
+import Busboy from "busboy";
 
-function matchSample(fileName: string): PurchaseOrder | null {
-  const lower = fileName.toLowerCase();
-  if (
-    lower.includes("bmr") ||
-    lower.includes("4400042956") ||
-    lower.includes("hvac")
-  ) {
-    return structuredClone(
-      MOCK_POS.find((p) => p.po_number === "4400042956-0")!
-    );
-  }
-  if (
-    lower.includes("kent") ||
-    lower.includes("426rm0461") ||
-    lower.includes("ro_systems") ||
-    lower.includes("ro-systems")
-  ) {
-    return structuredClone(MOCK_POS.find((p) => p.po_number === "426RM0461")!);
-  }
-  if (lower.includes("prem") || lower.includes("000612")) {
-    return structuredClone(MOCK_POS.find((p) => p.po_number === "000612")!);
-  }
-  return null;
-}
-
-function buildPreview(fileName: string): PurchaseOrder {
-  const matched = matchSample(fileName);
-  const stamp = Date.now();
-
-  if (matched) {
-    return {
-      ...matched,
-      id: `po_${matched.customer_code.toLowerCase()}_${stamp}`,
-      status: "new",
-      parse_source: "upload",
-      source_file: fileName,
-      uploaded_at: new Date().toISOString(),
-      approved_by: undefined,
-      approved_at: undefined,
-      rejection_reason: undefined,
-    };
-  }
-
-  return {
-    id: `po_upload_${stamp}`,
-    po_number: `UP-${String(stamp).slice(-6)}`,
-    po_date: new Date().toISOString().slice(0, 10),
-    customer_code: "NEW",
-    customer_name: "Uploaded Customer",
-    delivery_date: null,
-    payment_terms: "45 Days",
-    items: [
-      {
-        item_code: "ITEM-001",
-        description: "Parsed line item from upload",
-        part_code: null,
-        quantity: 1000,
-        uom: "NOS",
-        rate: 10,
-        total: 10000,
-        material_grade: null,
-        colour: null,
-      },
-    ],
-    total_amount: 10000,
-    gst: "CGST 9% + SGST 9%",
-    status: "new",
-    parse_source: "upload",
-    source_file: fileName,
-    uploaded_at: new Date().toISOString(),
-  };
-}
-
-/**
- * POST /api/po/upload
- *
- * Accepts either:
- * - multipart/form-data with `file` (PDF/Excel)
- * - application/json `{ filename: "BMR_....pdf" }`
- *
- * Filenames containing BMR / Kent / Prem map to the 3 sample fixtures.
- */
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-async function readRawBody(req: NextApiRequest): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-  return Buffer.concat(chunks);
+interface ParsedUpload {
+  fileName: string;
+  mimeType: string;
+  buffer: Buffer;
 }
 
-function extractFilenameFromMultipart(
-  body: Buffer,
-  contentType: string
-): string | null {
-  const text = body.toString("latin1");
-  const match = /filename\*?=(?:UTF-8''|")?([^\";\r\n]+)"?/i.exec(text);
-  if (match?.[1]) {
-    try {
-      return decodeURIComponent(match[1].replace(/"/g, "").trim());
-    } catch {
-      return match[1].replace(/"/g, "").trim();
+function parseMultipart(req: NextApiRequest): Promise<ParsedUpload> {
+  return new Promise((resolve, reject) => {
+    const contentType = req.headers["content-type"];
+    if (!contentType || !contentType.includes("multipart/form-data")) {
+      reject(new Error("Expected multipart/form-data with a PDF file."));
+      return;
     }
-  }
-  if (contentType.includes("filename=")) {
-    const m = /filename="?([^";]+)"?/i.exec(contentType);
-    if (m?.[1]) return m[1];
-  }
-  return null;
+
+    const busboy = Busboy({
+      headers: { "content-type": contentType },
+      limits: { files: 1, fileSize: 20 * 1024 * 1024 },
+    });
+
+    let fileName = "";
+    let mimeType = "application/pdf";
+    const chunks: Buffer[] = [];
+    let sawFile = false;
+    let truncated = false;
+
+    busboy.on(
+      "file",
+      (
+        _name: string,
+        stream: NodeJS.ReadableStream,
+        info: { filename: string; mimeType: string }
+      ) => {
+        sawFile = true;
+        fileName = info.filename || "po.pdf";
+        mimeType = info.mimeType || "application/pdf";
+        stream.on("data", (d: Buffer) => chunks.push(d));
+        stream.on("limit", () => {
+          truncated = true;
+        });
+      }
+    );
+
+    busboy.on("error", reject);
+    busboy.on("finish", () => {
+      if (truncated) {
+        reject(new Error("PDF exceeds the 20 MB upload limit."));
+        return;
+      }
+      if (!sawFile || chunks.length === 0) {
+        reject(new Error("PDF file is required (field name: file)."));
+        return;
+      }
+      resolve({
+        fileName,
+        mimeType,
+        buffer: Buffer.concat(chunks),
+      });
+    });
+
+    req.pipe(busboy);
+  });
 }
 
+/**
+ * POST /api/po/upload
+ * Accepts multipart PDF → stores in Firebase Storage → returns URL only.
+ * Does NOT create a purchase-order document.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -128,43 +86,31 @@ export default async function handler(
   }
 
   try {
-    const contentType = req.headers["content-type"] || "";
-    const raw = await readRawBody(req);
-    let fileName = "uploaded-po.pdf";
-
-    if (contentType.includes("application/json")) {
-      const parsed = JSON.parse(raw.toString("utf8") || "{}") as {
-        filename?: string;
-        fileName?: string;
-        name?: string;
-      };
-      fileName =
-        parsed.filename || parsed.fileName || parsed.name || fileName;
-    } else if (contentType.includes("multipart/form-data")) {
-      fileName =
-        extractFilenameFromMultipart(raw, contentType) || fileName;
-    } else if (contentType.includes("application/x-www-form-urlencoded")) {
-      const params = new URLSearchParams(raw.toString("utf8"));
-      fileName =
-        params.get("filename") ||
-        params.get("fileName") ||
-        params.get("name") ||
-        fileName;
+    const uploaded = await parseMultipart(req);
+    const lower = uploaded.fileName.toLowerCase();
+    if (!lower.endsWith(".pdf") && uploaded.mimeType !== "application/pdf") {
+      return res.status(400).json({
+        error: "Only PDF files are accepted for PO record-keeping.",
+      });
     }
 
-    fileName = fileName.trim() || "uploaded-po.pdf";
-    const po = buildPreview(fileName);
-    const matched = Boolean(matchSample(fileName));
+    const result = await uploadPoPdf({
+      buffer: uploaded.buffer,
+      fileName: uploaded.fileName.endsWith(".pdf")
+        ? uploaded.fileName
+        : `${uploaded.fileName}.pdf`,
+      contentType: "application/pdf",
+    });
 
     return res.status(200).json({
       ok: true,
-      po,
-      matched,
-      message: matched
-        ? `Matched sample PO ${po.po_number} from filename "${fileName}".`
-        : `Parsed generic preview from "${fileName}". Name file with BMR, Kent, or Prem for fixtures.`,
+      pdfUrl: result.pdfUrl,
+      storagePath: result.storagePath,
+      fileName: result.fileName,
+      sizeBytes: uploaded.buffer.length,
     });
   } catch (err) {
+    console.error("[po/upload]", err);
     const message = err instanceof Error ? err.message : "Upload failed";
     return res.status(500).json({ error: message });
   }

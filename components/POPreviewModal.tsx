@@ -2,6 +2,13 @@
 
 import { useState } from "react";
 import Button from "@/components/Button";
+import {
+  hasGstBreakdown,
+  itemLineTotal,
+  itemSubTotal,
+  poGrandTotal,
+  poSubTotal,
+} from "@/lib/po-gst";
 import { formatINR, type PurchaseOrder } from "@/lib/types";
 
 interface POPreviewModalProps {
@@ -39,6 +46,8 @@ export default function POPreviewModal({
   }
 
   const showError = Boolean(localError || error);
+  const withGst = hasGstBreakdown(po);
+  const interstate = po.interstate === true;
 
   return (
     <div
@@ -51,7 +60,7 @@ export default function POPreviewModal({
       }}
     >
       <div
-        className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-ps-gray-200 bg-white shadow-card-hover"
+        className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg border border-ps-gray-200 bg-white shadow-card-hover"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between border-b border-ps-navy/20 bg-ps-navy px-6 py-4 text-white">
@@ -100,9 +109,9 @@ export default function POPreviewModal({
               <dd>{po.items.length}</dd>
             </div>
             <div>
-              <dt className="text-ps-gray-500">Total Amount</dt>
+              <dt className="text-ps-gray-500">Grand Total</dt>
               <dd className="font-semibold text-ps-navy">
-                {formatINR(po.total_amount)}
+                {formatINR(poGrandTotal(po))}
               </dd>
             </div>
           </dl>
@@ -111,11 +120,28 @@ export default function POPreviewModal({
             <table className="min-w-full text-left text-sm leading-relaxed">
               <thead className="bg-ps-navy text-white">
                 <tr>
-                  <th className="px-6 py-3 text-xs uppercase">Item Code</th>
-                  <th className="px-6 py-3 text-xs uppercase">Description</th>
-                  <th className="px-6 py-3 text-xs uppercase">Qty</th>
-                  <th className="px-6 py-3 text-xs uppercase">Rate</th>
-                  <th className="px-6 py-3 text-xs uppercase">Total</th>
+                  <th className="px-4 py-3 text-xs uppercase">Item Code</th>
+                  <th className="px-4 py-3 text-xs uppercase">Description</th>
+                  {withGst && (
+                    <th className="px-4 py-3 text-xs uppercase">HSN</th>
+                  )}
+                  <th className="px-4 py-3 text-xs uppercase">Qty</th>
+                  <th className="px-4 py-3 text-xs uppercase">Rate</th>
+                  {withGst && (
+                    <>
+                      <th className="px-4 py-3 text-xs uppercase">Sub Total</th>
+                      {!interstate && (
+                        <>
+                          <th className="px-4 py-3 text-xs uppercase">CGST</th>
+                          <th className="px-4 py-3 text-xs uppercase">SGST</th>
+                        </>
+                      )}
+                      {interstate && (
+                        <th className="px-4 py-3 text-xs uppercase">IGST</th>
+                      )}
+                    </>
+                  )}
+                  <th className="px-4 py-3 text-xs uppercase">Total</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,19 +152,95 @@ export default function POPreviewModal({
                       i % 2 === 0 ? "bg-white" : "bg-ps-gray-50/80"
                     }`}
                   >
-                    <td className="px-6 py-3.5 font-medium text-ps-navy">
+                    <td className="px-4 py-3 font-medium text-ps-navy">
                       {item.item_code}
                     </td>
-                    <td className="px-6 py-3.5">{item.description}</td>
-                    <td className="px-6 py-3.5">
+                    <td className="px-4 py-3">{item.description}</td>
+                    {withGst && (
+                      <td className="px-4 py-3 text-xs">
+                        {item.hsn_code || "—"}
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
                       {item.quantity.toLocaleString("en-IN")} {item.uom}
                     </td>
-                    <td className="px-6 py-3.5">{item.rate}</td>
-                    <td className="px-6 py-3.5">{formatINR(item.total)}</td>
+                    <td className="px-4 py-3">{item.rate}</td>
+                    {withGst && (
+                      <>
+                        <td className="px-4 py-3">
+                          {formatINR(itemSubTotal(item))}
+                        </td>
+                        {!interstate && (
+                          <>
+                            <td className="px-4 py-3 text-xs">
+                              {formatINR(item.cgst_amount ?? 0)}
+                              <span className="block text-ps-gray-400">
+                                @{item.cgst_percent ?? 0}%
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-xs">
+                              {formatINR(item.sgst_amount ?? 0)}
+                              <span className="block text-ps-gray-400">
+                                @{item.sgst_percent ?? 0}%
+                              </span>
+                            </td>
+                          </>
+                        )}
+                        {interstate && (
+                          <td className="px-4 py-3 text-xs">
+                            {formatINR(item.igst_amount ?? 0)}
+                            <span className="block text-ps-gray-400">
+                              @{item.igst_percent ?? 0}%
+                            </span>
+                          </td>
+                        )}
+                      </>
+                    )}
+                    <td className="px-4 py-3 font-semibold">
+                      {formatINR(itemLineTotal(item))}
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-ps-gray-200 bg-ps-gray-50 px-4 py-3">
+            <dl className="ml-auto max-w-sm space-y-1 text-sm">
+              {withGst ? (
+                <>
+                  <div className="flex justify-between text-ps-gray-600">
+                    <dt>Sub Total</dt>
+                    <dd>{formatINR(poSubTotal(po))}</dd>
+                  </div>
+                  <div className="flex justify-between text-ps-gray-600">
+                    <dt>
+                      Total Tax
+                      {interstate
+                        ? ` (IGST @ ${po.items[0]?.igst_percent ?? 18}%)`
+                        : ` (CGST + SGST @ ${(po.items[0]?.cgst_percent ?? 9) + (po.items[0]?.sgst_percent ?? 9)}%)`}
+                    </dt>
+                    <dd>
+                      {formatINR(
+                        po.total_tax ??
+                          (po.total_cgst ?? 0) +
+                            (po.total_sgst ?? 0) +
+                            (po.total_igst ?? 0)
+                      )}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between border-t border-ps-navy/20 pt-2 font-serif text-ps-h2 text-ps-navy">
+                    <dt>Grand Total</dt>
+                    <dd>{formatINR(poGrandTotal(po))}</dd>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between font-serif text-ps-h2 text-ps-navy">
+                  <dt>Total</dt>
+                  <dd>{formatINR(po.total_amount)}</dd>
+                </div>
+              )}
+            </dl>
           </div>
 
           <div className="mt-6">
@@ -171,7 +273,11 @@ export default function POPreviewModal({
             <Button variant="secondary" onClick={onCancel} disabled={busy}>
               Cancel
             </Button>
-            <Button variant="danger" disabled={busy} onClick={() => void handleReject()}>
+            <Button
+              variant="danger"
+              disabled={busy}
+              onClick={() => void handleReject()}
+            >
               {busy ? "Working…" : "Reject"}
             </Button>
             <button

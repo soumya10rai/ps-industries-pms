@@ -12,6 +12,7 @@ import {
   isAwaitingApproval,
   type PurchaseOrder,
 } from "@/lib/types";
+import { hasGstBreakdown, poGrandTotal, poSubTotal } from "@/lib/po-gst";
 
 export default function ApprovalsPage() {
   const { user, profile } = useAuth();
@@ -227,8 +228,13 @@ export default function ApprovalsPage() {
                 <div>
                   <dt className="text-xs text-ps-gray-500">Amount</dt>
                   <dd className="font-semibold text-ps-navy">
-                    {formatINR(po.total_amount)}
+                    {formatINR(poGrandTotal(po))}
                   </dd>
+                  {hasGstBreakdown(po) && (
+                    <p className="text-[11px] text-ps-gray-500">
+                      Sub: {formatINR(poSubTotal(po))}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <dt className="text-xs text-ps-gray-500">Items</dt>

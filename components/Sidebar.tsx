@@ -142,6 +142,12 @@ const ADMIN_NAV: NavItem[] = [
     icon: "user-cog",
     roles: ["admin"],
   },
+  {
+    label: "Seed Parts",
+    href: "/admin/seed-parts",
+    icon: "box",
+    roles: ["admin"],
+  },
 ];
 
 function visible(item: NavItem, role: UserRole | null): boolean {
