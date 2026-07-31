@@ -91,5 +91,25 @@ service cloud.firestore {
       allow read: if isAdmin() || isAccountant() || isPlantHead();
       allow write: if false;
     }
+
+    function isProductionHead() {
+      return isApproved() && userDoc().role == 'production_head';
+    }
+
+    function canReadDispatch() {
+      return isAdmin() || isAccountant() || isPlantHead()
+        || isStoreManager() || isProductionHead();
+    }
+
+    // Dispatch collections — Admin SDK writes; approved ops roles may read.
+    match /dispatch_uploads/{id} {
+      allow read: if canReadDispatch();
+      allow write: if false;
+    }
+
+    match /dispatches/{id} {
+      allow read: if canReadDispatch();
+      allow write: if false;
+    }
   }
 }

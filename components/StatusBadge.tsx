@@ -13,6 +13,13 @@ const STATUS_STYLES: Record<string, string> = {
   scheduled: "bg-sky-100 text-sky-900 ring-sky-300",
   running: "bg-emerald-100 text-emerald-900 ring-emerald-300",
   paused: "bg-amber-100 text-amber-900 ring-amber-300",
+  // Dispatch variance statuses
+  on_track: "bg-emerald-100 text-emerald-900 ring-emerald-300",
+  shortfall: "bg-red-100 text-red-900 ring-red-300",
+  excess: "bg-amber-100 text-amber-900 ring-amber-300",
+  complete: "bg-ps-gray-100 text-ps-gray-800 ring-ps-gray-300",
+  processing: "bg-sky-100 text-sky-900 ring-sky-300",
+  failed: "bg-red-100 text-red-900 ring-red-300",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -28,6 +35,12 @@ const STATUS_LABELS: Record<string, string> = {
   scheduled: "Scheduled",
   running: "Running",
   paused: "Paused",
+  on_track: "On Track",
+  shortfall: "Shortfall",
+  excess: "Excess",
+  complete: "Complete",
+  processing: "Processing",
+  failed: "Failed",
 };
 
 interface StatusBadgeProps {

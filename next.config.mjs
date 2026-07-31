@@ -3,7 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     instrumentationHook: true,
-    serverComponentsExternalPackages: ["firebase-admin"],
+    serverComponentsExternalPackages: [
+      "firebase-admin",
+      "pdfkit",
+      "fontkit",
+    ],
   },
 };
 

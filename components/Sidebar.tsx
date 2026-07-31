@@ -51,10 +51,33 @@ const MAIN_NAV: NavItem[] = [
   },
   {
     label: "Dispatch",
-    href: "#",
+    href: "/dispatch",
     icon: "truck",
-    roles: ["admin", "plant_head"],
-    comingSoon: true,
+    roles: [
+      "admin",
+      "plant_head",
+      "accountant",
+      "store_manager",
+      "production_head",
+    ],
+  },
+  {
+    label: "Upload Dispatch",
+    href: "/dispatch/upload",
+    icon: "upload",
+    roles: ["admin", "accountant", "plant_head"],
+  },
+  {
+    label: "Variance Report",
+    href: "/dispatch/variance-report",
+    icon: "chart",
+    roles: ["admin", "plant_head", "accountant"],
+  },
+  {
+    label: "Dispatch History",
+    href: "/dispatch/uploads",
+    icon: "orders",
+    roles: ["admin", "accountant", "plant_head"],
   },
   {
     label: "Production Runs",
@@ -237,6 +260,14 @@ export default function Sidebar({
 function isActive(pathname: string | null, href: string): boolean {
   if (!pathname || !href || href === "#") return false;
   if (href === "/dashboard") return pathname === "/dashboard";
+  // Exact match for sibling routes that share a prefix (e.g. /dispatch vs /dispatch/upload)
+  if (
+    href === "/dispatch" ||
+    href === "/store/inventory" ||
+    href === "/accountant/po-list"
+  ) {
+    return pathname === href;
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

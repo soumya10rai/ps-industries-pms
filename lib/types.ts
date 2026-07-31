@@ -40,11 +40,12 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
     "/plant-head",
     "/store",
     "/production",
+    "/dispatch",
   ],
-  plant_head: ["/dashboard", "/plant-head", "/store"],
-  accountant: ["/dashboard", "/accountant"],
-  store_manager: ["/dashboard", "/store"],
-  production_head: ["/dashboard", "/production"],
+  plant_head: ["/dashboard", "/plant-head", "/store", "/dispatch"],
+  accountant: ["/dashboard", "/accountant", "/dispatch"],
+  store_manager: ["/dashboard", "/store", "/dispatch"],
+  production_head: ["/dashboard", "/production", "/dispatch"],
 };
 
 export const ALLOWED_EMAIL_DOMAINS = [
@@ -276,6 +277,64 @@ export interface InventoryUpload {
   plant: string;
   status: InventoryUploadStatus;
 }
+
+/** Plants available on Schedule vs Despatch workbooks. */
+export const DISPATCH_PLANTS = [
+  "Roorkee",
+  "Noida A-06",
+  "Noida A-07",
+  "All",
+] as const;
+
+export type DispatchPlant = (typeof DISPATCH_PLANTS)[number];
+
+export type DispatchLineStatus =
+  | "on_track"
+  | "shortfall"
+  | "excess"
+  | "complete";
+
+export type DispatchUploadStatus = "processing" | "complete" | "failed";
+
+/** Firestore `/dispatch_uploads/{uploadId}`. */
+export interface DispatchUpload {
+  uploadId: string;
+  fileName: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  periodStart: string;
+  periodEnd: string;
+  totalItems: number;
+  isLatest: boolean;
+  plant: string;
+  status: DispatchUploadStatus;
+}
+
+/** Firestore `/dispatches/{dispatchId}` — flat plan vs actual rows. */
+export interface DispatchItem {
+  dispatchId: string;
+  uploadId: string;
+  customer: string;
+  itemCode: string;
+  itemDescription: string;
+  plannedQuantity: number;
+  actualQuantity: number;
+  variance: number;
+  variancePercent: number;
+  status: DispatchLineStatus;
+  plant: string;
+  periodStart: string;
+  periodEnd: string;
+  dispatchDate?: string;
+  createdAt: string;
+}
+
+export const DISPATCH_STATUS_LABELS: Record<DispatchLineStatus, string> = {
+  complete: "Complete",
+  on_track: "On Track",
+  shortfall: "Shortfall",
+  excess: "Excess",
+};
 
 export interface ProductionRun {
   id: string;
