@@ -32,15 +32,17 @@ export default function DataTable({ headers, children }: DataTableProps) {
 export function TableRow({
   children,
   index = 0,
+  className = "",
 }: {
   children: ReactNode;
   index?: number;
+  className?: string;
 }) {
   return (
     <tr
       className={`transition duration-200 ease-in-out hover:bg-ps-gray-100 ${
         index % 2 === 0 ? "bg-white" : "bg-ps-gray-50/80"
-      }`}
+      } ${className}`}
     >
       {children}
     </tr>

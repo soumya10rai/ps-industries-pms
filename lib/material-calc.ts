@@ -11,9 +11,7 @@ export interface MaterialStock {
 }
 
 /**
- * Demo store stock levels (kg).
- * HIPS SH03 is intentionally short so shortfall UI is visible;
- * HIPS NATURAL is surplus so OK / green path is visible.
+ * Fallback demo stock when Firestore /raw_materials is empty.
  */
 export const MATERIAL_STOCK: MaterialStock[] = [
   { material: "HIPS SH03", stock_kg: 234 },
@@ -26,6 +24,8 @@ export const MATERIAL_STOCK: MaterialStock[] = [
 
 export interface MaterialLine {
   material: string;
+  /** Resolved raw_materials code when known. */
+  material_code?: string;
   required_kg: number;
   stock_kg: number;
   shortfall_kg: number;
@@ -55,14 +55,15 @@ export function calcUsableWeightKg(
   return Number(kg.toFixed(1));
 }
 
-/** Map a PO line item to a demo material grade / SKU name. */
+/** Map a PO line item to a material grade / SKU name. */
 export function resolveMaterial(item: POItem): string {
   const grade = (item.material_grade || "").toUpperCase();
   const desc = (item.description || "").toUpperCase();
   const code = item.item_code || "";
 
-  if (grade.includes("HIPS") || desc.includes("HIPS")) {
-    // Alternate between short and OK stock for demo variety
+  if (item.material_grade?.trim()) return grade;
+
+  if (desc.includes("HIPS") || grade.includes("HIPS")) {
     return code.endsWith("0") || code.includes("602240")
       ? "HIPS SH03"
       : "HIPS NATURAL";
@@ -73,14 +74,26 @@ export function resolveMaterial(item: POItem): string {
   if (desc.includes("FRAME") || desc.includes("HINGE")) return "HIPS SH03";
   if (desc.includes("TRAY") || desc.includes("COVER")) return "HIPS NATURAL";
 
-  // Deterministic fallback from item code
   const idx =
     code.split("").reduce((s, ch) => s + ch.charCodeAt(0), 0) %
     MATERIAL_STOCK.length;
   return MATERIAL_STOCK[idx]!.material;
 }
 
-function stockFor(material: string): number {
+function stockFromMap(
+  material: string,
+  stockMap: Map<string, number> | null
+): number {
+  if (stockMap && stockMap.size > 0) {
+    const key = material.toUpperCase();
+    if (stockMap.has(key)) return stockMap.get(key)!;
+
+    for (const [k, v] of Array.from(stockMap.entries())) {
+      if (k.includes(key) || key.includes(k)) return v;
+    }
+    return 0;
+  }
+
   return (
     MATERIAL_STOCK.find((m) => m.material === material)?.stock_kg ?? 0
   );
@@ -88,8 +101,12 @@ function stockFor(material: string): number {
 
 /**
  * Aggregate material requirements for one purchase order.
+ * Pass a live stock map from Firestore to replace MATERIAL_STOCK.
  */
-export function calculatePOMaterials(po: PurchaseOrder): POMaterialCheck {
+export function calculatePOMaterials(
+  po: PurchaseOrder,
+  stockMap: Map<string, number> | null = null
+): POMaterialCheck {
   const buckets = new Map<
     string,
     { required_kg: number; item_codes: string[]; total_parts: number }
@@ -111,7 +128,7 @@ export function calculatePOMaterials(po: PurchaseOrder): POMaterialCheck {
 
   const lines: MaterialLine[] = Array.from(buckets.entries()).map(
     ([material, agg]) => {
-      const stock_kg = stockFor(material);
+      const stock_kg = stockFromMap(material, stockMap);
       const shortfall_kg = Math.max(
         0,
         Number((agg.required_kg - stock_kg).toFixed(1))

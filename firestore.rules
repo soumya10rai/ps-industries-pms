@@ -56,5 +56,29 @@ service cloud.firestore {
       // Writes go through Firebase Admin SDK (API routes) — deny client writes
       allow write: if false;
     }
+
+    function isStoreManager() {
+      return isApproved() && userDoc().role == 'store_manager';
+    }
+
+    function canReadInventory() {
+      return isAdmin() || isPlantHead() || isStoreManager();
+    }
+
+    // Inventory collections — Admin SDK writes; authenticated store roles may read.
+    match /raw_materials/{code} {
+      allow read: if canReadInventory();
+      allow write: if false;
+    }
+
+    match /stock_movements/{id} {
+      allow read: if canReadInventory();
+      allow write: if false;
+    }
+
+    match /inventory_uploads/{id} {
+      allow read: if canReadInventory();
+      allow write: if false;
+    }
   }
 }

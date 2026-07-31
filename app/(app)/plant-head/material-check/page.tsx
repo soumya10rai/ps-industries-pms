@@ -50,7 +50,7 @@ export default function MaterialCheckPage() {
     <div className="ps-section">
       <PageHeader
         title="Material Check"
-        subtitle={`Calculate resin needs for approved POs — ${PART_WEIGHT_GRAMS}g/part + ${SCRAP_PERCENT}% scrap. Formula: (g/1000) × qty × (1 + scrap%).`}
+        subtitle={`Live stock from /raw_materials — ${PART_WEIGHT_GRAMS}g/part + ${SCRAP_PERCENT}% scrap. Formula: (g/1000) × qty × (1 + scrap%). Approving a PO with enough stock auto-deducts inventory.`}
         actions={
           <Button
             variant="secondary"

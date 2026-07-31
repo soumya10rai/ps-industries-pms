@@ -39,17 +39,15 @@ const MAIN_NAV: NavItem[] = [
   },
   {
     label: "Inventory",
-    href: "#",
+    href: "/store/inventory",
     icon: "box",
     roles: ["admin", "plant_head", "store_manager"],
-    comingSoon: true,
   },
   {
-    label: "Stock",
-    href: "#",
-    icon: "box",
-    roles: ["admin", "store_manager"],
-    comingSoon: true,
+    label: "Upload Excel",
+    href: "/store/inventory/upload",
+    icon: "upload",
+    roles: ["admin", "plant_head", "store_manager"],
   },
   {
     label: "Dispatch",

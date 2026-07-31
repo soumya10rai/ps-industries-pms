@@ -6,6 +6,7 @@ import {
   calculatePOMaterials,
   type POMaterialCheck,
 } from "@/lib/material-calc";
+import { calculatePOMaterialsLive } from "@/lib/material-calc-live";
 import { getPOStore, MOCK_POS } from "@/lib/mock-data";
 import type { PurchaseOrder } from "@/lib/types";
 
@@ -45,7 +46,6 @@ async function loadApprovedPOs(): Promise<PurchaseOrder[]> {
         .limit(100)
         .get();
     } catch {
-      // Fallback if composite index missing — filter in memory
       snap = await db.collection("po_uploads").limit(200).get();
     }
 
@@ -64,7 +64,7 @@ async function loadApprovedPOs(): Promise<PurchaseOrder[]> {
 }
 
 /**
- * GET  /api/material-calc/calculate — all approved POs with material lines
+ * GET  /api/material-calc/calculate — all approved POs with live stock
  * POST /api/material-calc/calculate — single PO by id / po_number
  */
 export default async function handler(
@@ -74,7 +74,10 @@ export default async function handler(
   try {
     if (req.method === "GET") {
       const approved = await loadApprovedPOs();
-      const checks: POMaterialCheck[] = approved.map(calculatePOMaterials);
+      const checks: POMaterialCheck[] = [];
+      for (const po of approved) {
+        checks.push(await calculatePOMaterialsLive(po));
+      }
       return res.status(200).json({
         ok: true,
         formula: {
@@ -83,6 +86,7 @@ export default async function handler(
           expression:
             "(part_weight_grams / 1000) * quantity * (1 + scrap_percent/100)",
         },
+        stock_source: "raw_materials",
         count: checks.length,
         checks,
       });
@@ -99,7 +103,6 @@ export default async function handler(
         approved.find((p) => p.id === poId || p.po_number === poId) || null;
 
       if (!po) {
-        // Also try any status from memory/Firestore for single calc
         try {
           const db = getAdminDb();
           const doc = await db.collection("po_uploads").doc(poId).get();
@@ -108,7 +111,7 @@ export default async function handler(
               doc.id,
               doc.data() as Record<string, unknown>
             );
-            const check = calculatePOMaterials(mapped);
+            const check = await calculatePOMaterialsLive(mapped);
             return res.status(200).json({ ok: true, check });
           }
         } catch {
@@ -119,7 +122,7 @@ export default async function handler(
 
       return res.status(200).json({
         ok: true,
-        check: calculatePOMaterials(po),
+        check: await calculatePOMaterialsLive(po),
       });
     }
 
@@ -128,6 +131,21 @@ export default async function handler(
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Material calculation failed.";
+    // Fallback to sync calc with mock stock if live fails hard
+    try {
+      if (req.method === "GET") {
+        const approved = await loadApprovedPOs();
+        return res.status(200).json({
+          ok: true,
+          stock_source: "fallback",
+          count: approved.length,
+          checks: approved.map((po) => calculatePOMaterials(po)),
+          warning: message,
+        });
+      }
+    } catch {
+      // ignore
+    }
     return res.status(500).json({ error: message });
   }
 }

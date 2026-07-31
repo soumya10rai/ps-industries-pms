@@ -90,12 +90,27 @@ export default function ApprovalsPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || `Approve failed (${res.status})`);
+        const shortfallMsg =
+          Array.isArray(data.shortfalls) && data.shortfalls.length
+            ? ` Shortfall: ${data.shortfalls
+                .map(
+                  (s: { material: string; shortfall_kg: number }) =>
+                    `${s.material} (${s.shortfall_kg} kg)`
+                )
+                .join(", ")}`
+            : "";
+        throw new Error(
+          (data.error || `Approve failed (${res.status})`) + shortfallMsg
+        );
       }
 
       setOrders((prev) => prev.filter((po) => po.id !== poId));
       setSelected(null);
-      setToast("PO Approved");
+      setToast(
+        typeof data.message === "string" && data.message
+          ? data.message
+          : "PO Approved"
+      );
       setRefreshKey((k) => k + 1);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Approve failed");

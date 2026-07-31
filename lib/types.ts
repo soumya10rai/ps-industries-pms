@@ -41,7 +41,7 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
     "/store",
     "/production",
   ],
-  plant_head: ["/dashboard", "/plant-head"],
+  plant_head: ["/dashboard", "/plant-head", "/store"],
   accountant: ["/dashboard", "/accountant"],
   store_manager: ["/dashboard", "/store"],
   production_head: ["/dashboard", "/production"],
@@ -133,6 +133,77 @@ export interface InventoryItem {
   reorder_level: number;
   location: string;
   last_updated: string;
+}
+
+export const INVENTORY_PLANTS = [
+  "Noida A-06",
+  "Noida A-07",
+  "Roorkee",
+] as const;
+
+export type InventoryPlant = (typeof INVENTORY_PLANTS)[number];
+
+export const DEFAULT_REORDER_LEVEL_KG = 100;
+
+export type MaterialType = "raw_material" | "masterbatch";
+
+export const MATERIAL_TYPE_LABELS: Record<MaterialType, string> = {
+  raw_material: "Raw Material",
+  masterbatch: "Masterbatch",
+};
+
+export type StockMovementType =
+  | "receive"
+  | "issue"
+  | "adjustment"
+  | "opening_balance";
+
+export type InventoryUploadStatus = "processing" | "complete" | "failed";
+
+export interface RawMaterial {
+  materialCode: string;
+  materialName: string;
+  /** ABS, PP, HIPS, GPPS, DELRIN, MB … — used for filtering. */
+  materialGroup: string;
+  materialType: MaterialType;
+  currentStockKg: number;
+  reorderLevelKg: number;
+  unit: string;
+  location: string;
+  ratePerKg: number;
+  /** Supplier — masterbatch sheets carry a PARTY NAME column. */
+  partyName?: string;
+  lastUpdatedAt: string;
+  lastUpdatedBy: string;
+  isActive: boolean;
+}
+
+export interface StockMovement {
+  movementId: string;
+  materialCode: string;
+  materialName: string;
+  type: StockMovementType;
+  quantityKg: number;
+  balanceAfterKg: number;
+  reason: string;
+  referenceId?: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  plant: string;
+}
+
+export interface InventoryUpload {
+  uploadId: string;
+  fileName: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  totalItems: number;
+  itemsAdded: number;
+  itemsUpdated: number;
+  isLatest: boolean;
+  plant: string;
+  status: InventoryUploadStatus;
 }
 
 export interface ProductionRun {
