@@ -154,6 +154,8 @@ export interface NavItem {
   href: string;
   icon: string;
   roles?: UserRole[];
+  /** Unbuilt module — shown grayed out, not navigable. */
+  comingSoon?: boolean;
 }
 
 export function isUserRole(value: unknown): value is UserRole {

@@ -8,72 +8,6 @@ import type { NavItem, UserRole } from "@/lib/types";
 const MAIN_NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: "grid" },
   {
-    label: "Manpower",
-    href: "/admin/dashboard",
-    icon: "users",
-    roles: ["admin", "plant_head", "production_head"],
-  },
-  {
-    label: "Machines",
-    href: "/production/runs",
-    icon: "cpu",
-    roles: ["admin", "plant_head", "production_head"],
-  },
-  {
-    label: "Orders",
-    href: "/accountant/po-list",
-    icon: "orders",
-    roles: ["admin", "accountant", "plant_head"],
-  },
-  {
-    label: "Inventory",
-    href: "/store/inventory",
-    icon: "box",
-    roles: ["admin", "store_manager", "plant_head"],
-  },
-  {
-    label: "Clients",
-    href: "/accountant/po-list",
-    icon: "clients",
-    roles: ["admin", "accountant"],
-  },
-  {
-    label: "Suppliers",
-    href: "/store/inventory",
-    icon: "truck",
-    roles: ["admin", "store_manager", "accountant"],
-  },
-  {
-    label: "Production",
-    href: "/production/runs",
-    icon: "factory",
-    roles: ["admin", "production_head", "plant_head"],
-  },
-  {
-    label: "HR",
-    href: "/admin/dashboard",
-    icon: "hr",
-    roles: ["admin", "plant_head"],
-  },
-  {
-    label: "Reports",
-    href: "/dashboard",
-    icon: "chart",
-    roles: ["admin", "plant_head", "accountant"],
-  },
-  {
-    label: "Reconciliation",
-    href: "/accountant/po-list",
-    icon: "check",
-    roles: ["admin", "accountant"],
-  },
-  {
-    label: "Imports",
-    href: "/accountant/po-upload",
-    icon: "upload",
-    roles: ["admin", "accountant"],
-  },
-  {
     label: "Approvals",
     href: "/plant-head/approvals",
     icon: "check",
@@ -83,19 +17,133 @@ const MAIN_NAV: NavItem[] = [
     label: "Material Check",
     href: "/plant-head/material-check",
     icon: "box",
+    roles: ["admin", "plant_head"],
+  },
+  {
+    label: "Reconciliation",
+    href: "/plant-head/material-check",
+    icon: "check",
+    roles: ["admin", "plant_head"],
+  },
+  {
+    label: "PO List",
+    href: "/accountant/po-list",
+    icon: "orders",
+    roles: ["admin", "accountant"],
+  },
+  {
+    label: "PO Upload",
+    href: "/accountant/po-upload",
+    icon: "upload",
+    roles: ["admin", "accountant"],
+  },
+  {
+    label: "Inventory",
+    href: "#",
+    icon: "box",
     roles: ["admin", "plant_head", "store_manager"],
+    comingSoon: true,
+  },
+  {
+    label: "Stock",
+    href: "#",
+    icon: "box",
+    roles: ["admin", "store_manager"],
+    comingSoon: true,
+  },
+  {
+    label: "Dispatch",
+    href: "#",
+    icon: "truck",
+    roles: ["admin", "plant_head"],
+    comingSoon: true,
+  },
+  {
+    label: "Production Runs",
+    href: "#",
+    icon: "factory",
+    roles: ["admin", "production_head"],
+    comingSoon: true,
+  },
+  {
+    label: "Machines",
+    href: "#",
+    icon: "cpu",
+    roles: ["admin", "plant_head", "production_head"],
+    comingSoon: true,
+  },
+  {
+    label: "Quality",
+    href: "#",
+    icon: "check",
+    roles: ["admin", "production_head"],
+    comingSoon: true,
+  },
+  {
+    label: "Finance",
+    href: "#",
+    icon: "chart",
+    roles: ["admin", "accountant"],
+    comingSoon: true,
+  },
+  {
+    label: "Manpower",
+    href: "#",
+    icon: "users",
+    roles: ["admin"],
+    comingSoon: true,
+  },
+  {
+    label: "HR",
+    href: "#",
+    icon: "hr",
+    roles: ["admin"],
+    comingSoon: true,
+  },
+  {
+    label: "Clients",
+    href: "#",
+    icon: "clients",
+    roles: ["admin"],
+    comingSoon: true,
+  },
+  {
+    label: "Suppliers",
+    href: "#",
+    icon: "truck",
+    roles: ["admin"],
+    comingSoon: true,
+  },
+  {
+    label: "Reports",
+    href: "#",
+    icon: "chart",
+    roles: ["admin"],
+    comingSoon: true,
   },
   {
     label: "Surveillance",
-    href: "/plant-head/approvals",
+    href: "#",
     icon: "eye",
-    roles: ["admin", "plant_head"],
+    roles: ["admin"],
+    comingSoon: true,
   },
 ];
 
 const ADMIN_NAV: NavItem[] = [
-  { label: "Settings", href: "/admin/dashboard", icon: "settings", roles: ["admin"] },
-  { label: "Invite Users", href: "/admin/invite-users", icon: "user-cog", roles: ["admin"] },
+  {
+    label: "Settings",
+    href: "#",
+    icon: "settings",
+    roles: ["admin"],
+    comingSoon: true,
+  },
+  {
+    label: "Invite Users",
+    href: "/admin/invite-users",
+    icon: "user-cog",
+    roles: ["admin"],
+  },
 ];
 
 function visible(item: NavItem, role: UserRole | null): boolean {
@@ -144,8 +192,12 @@ export default function Sidebar({
           </p>
           <ul className="space-y-0.5">
             {mainItems.map((item) => (
-              <li key={`${item.label}-${item.href}`}>
-                <NavLink item={item} active={isActive(pathname, item.href)} onNavigate={onClose} />
+              <li key={item.label}>
+                <NavLink
+                  item={item}
+                  active={!item.comingSoon && isActive(pathname, item.href)}
+                  onNavigate={onClose}
+                />
               </li>
             ))}
           </ul>
@@ -157,10 +209,10 @@ export default function Sidebar({
               </p>
               <ul className="space-y-0.5">
                 {adminItems.map((item) => (
-                  <li key={`${item.label}-${item.href}`}>
+                  <li key={item.label}>
                     <NavLink
                       item={item}
-                      active={isActive(pathname, item.href)}
+                      active={!item.comingSoon && isActive(pathname, item.href)}
                       onNavigate={onClose}
                     />
                   </li>
@@ -179,7 +231,7 @@ export default function Sidebar({
 }
 
 function isActive(pathname: string | null, href: string): boolean {
-  if (!pathname) return false;
+  if (!pathname || !href || href === "#") return false;
   if (href === "/dashboard") return pathname === "/dashboard";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -193,6 +245,30 @@ function NavLink({
   active: boolean;
   onNavigate?: () => void;
 }) {
+  const content = (
+    <>
+      <NavIcon name={item.icon} />
+      <span className="flex-1">{item.label}</span>
+      {item.comingSoon && (
+        <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-blue-100/80">
+          Soon
+        </span>
+      )}
+    </>
+  );
+
+  if (item.comingSoon) {
+    return (
+      <span
+        title="Coming soon"
+        aria-disabled="true"
+        className="flex cursor-not-allowed select-none items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-blue-50/90 opacity-40"
+      >
+        {content}
+      </span>
+    );
+  }
+
   return (
     <Link
       href={item.href}
@@ -203,8 +279,7 @@ function NavLink({
           : "text-blue-50/90 hover:bg-white/10 hover:text-white"
       }`}
     >
-      <NavIcon name={item.icon} />
-      <span>{item.label}</span>
+      {content}
     </Link>
   );
 }
