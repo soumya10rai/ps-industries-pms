@@ -95,7 +95,7 @@ const MAIN_NAV: NavItem[] = [
 
 const ADMIN_NAV: NavItem[] = [
   { label: "Settings", href: "/admin/dashboard", icon: "settings", roles: ["admin"] },
-  { label: "Users", href: "/admin/dashboard", icon: "user-cog", roles: ["admin"] },
+  { label: "Invite Users", href: "/admin/invite-users", icon: "user-cog", roles: ["admin"] },
 ];
 
 function visible(item: NavItem, role: UserRole | null): boolean {

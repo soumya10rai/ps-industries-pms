@@ -48,6 +48,7 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
 };
 
 export const ALLOWED_EMAIL_DOMAINS = [
+  "ps.com",
   "psindustriesindia.in",
   "psindustries.in",
 ] as const;

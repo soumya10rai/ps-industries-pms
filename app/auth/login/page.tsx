@@ -8,18 +8,22 @@ import { useAuth } from "@/lib/auth-context";
 import { isAllowedEmailDomain, ALLOWED_EMAIL_DOMAINS } from "@/lib/types";
 
 const DEMO_USERS = [
-  { email: "admin@psindustries.in", password: "admin123", role: "Admin" },
-  { email: "plant@psindustries.in", password: "plant123", role: "Plant Head" },
+  { email: "admin@ps.com", password: "Admin@123", role: "Admin" },
+  { email: "planthead@ps.com", password: "PlantHead@123", role: "Plant Head" },
   {
-    email: "accountant@psindustries.in",
-    password: "acc123",
+    email: "accountant@ps.com",
+    password: "Accountant@123",
     role: "Accountant",
   },
-  { email: "store@psindustries.in", password: "store123", role: "Store" },
   {
-    email: "production@psindustries.in",
-    password: "prod123",
-    role: "Production",
+    email: "storemanager@ps.com",
+    password: "StoreManager@123",
+    role: "Store Manager",
+  },
+  {
+    email: "productionhead@ps.com",
+    password: "ProdHead@123",
+    role: "Production Head",
   },
 ];
 
@@ -43,6 +47,7 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams?.get("next") ?? null;
+  const message = searchParams?.get("message") ?? null;
   const { establishSession } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -50,6 +55,9 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const successMessage =
+    message === "password_set" ? "Password set! You can sign in now." : null;
 
   const domainHint = useMemo(
     () => ALLOWED_EMAIL_DOMAINS.map((d) => `@${d}`).join(" or "),
@@ -127,6 +135,12 @@ function LoginForm() {
           Use your company account to access the plant portal.
         </p>
 
+        {successMessage && (
+          <div className="alert-success mt-6" role="status">
+            {successMessage}
+          </div>
+        )}
+
         {error && (
           <div className="alert-error mt-6" role="alert">
             {error}
@@ -147,7 +161,7 @@ function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className={`field-input ${error ? "field-input-error" : ""}`}
-              placeholder="you@psindustries.in"
+              placeholder="you@ps.com"
             />
           </div>
 

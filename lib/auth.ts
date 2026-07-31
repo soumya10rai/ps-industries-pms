@@ -35,6 +35,7 @@ export function isPublicPath(pathname: string): boolean {
     "/",
     "/auth/login",
     "/auth/register",
+    "/auth/set-password",
     "/login",
     "/register",
   ];

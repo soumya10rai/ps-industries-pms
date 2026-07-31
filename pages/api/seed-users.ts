@@ -1,59 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { FieldValue } from "firebase-admin/firestore";
-import { getAdminAuth, getAdminDb } from "@/lib/firebase-admin";
-import { ROLE_HOME, type UserRole } from "@/lib/types";
-
-/**
- * One-time sample users for local / staging.
- * Change passwords before any production use.
- */
-const SAMPLE_USERS: Array<{
-  email: string;
-  password: string;
-  displayName: string;
-  role: UserRole;
-}> = [
-  {
-    email: "admin@psindustries.in",
-    password: "admin123",
-    displayName: "System Admin",
-    role: "admin",
-  },
-  {
-    email: "plant@psindustries.in",
-    password: "plant123",
-    displayName: "Plant Head",
-    role: "plant_head",
-  },
-  {
-    email: "accountant@psindustries.in",
-    password: "acc123",
-    displayName: "Accountant",
-    role: "accountant",
-  },
-  {
-    email: "store@psindustries.in",
-    password: "store123",
-    displayName: "Store Manager",
-    role: "store_manager",
-  },
-  {
-    email: "production@psindustries.in",
-    password: "prod123",
-    displayName: "Production Head",
-    role: "production_head",
-  },
-];
+import { ROLE_HOME } from "@/lib/types";
+import { DEV_SEED_USERS, seedDevUsers } from "@/lib/auth/seed-users";
 
 /**
  * POST /api/seed-users
  *
  * Creates Firebase Auth users + Firestore /users/{uid} role documents.
  * Protect with header: x-seed-secret: <SEED_SECRET from .env.local>
- *
- * curl -X POST http://localhost:3000/api/seed-users \
- *   -H "x-seed-secret: $SEED_SECRET" \
- *   -H "Content-Type: application/json"
  */
 export default async function handler(
   req: NextApiRequest,
@@ -81,64 +34,25 @@ export default async function handler(
   }
 
   try {
-    const auth = getAdminAuth();
-    const db = getAdminDb();
-    const results: Array<Record<string, unknown>> = [];
-
-    for (const sample of SAMPLE_USERS) {
-      let uid: string;
-      let action: "created" | "updated" = "created";
-
-      try {
-        const existing = await auth.getUserByEmail(sample.email);
-        uid = existing.uid;
-        await auth.updateUser(uid, {
-          password: sample.password,
-          displayName: sample.displayName,
-          emailVerified: true,
-          disabled: false,
-        });
-        action = "updated";
-      } catch {
-        const created = await auth.createUser({
-          email: sample.email,
-          password: sample.password,
-          displayName: sample.displayName,
-          emailVerified: true,
-        });
-        uid = created.uid;
-        action = "created";
-      }
-
-      await db.collection("users").doc(uid).set(
-        {
-          email: sample.email,
-          displayName: sample.displayName,
-          role: sample.role,
-          approved: true,
-          updatedAt: FieldValue.serverTimestamp(),
-          createdAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      results.push({
-        action,
-        email: sample.email,
-        password: sample.password,
-        uid,
-        role: sample.role,
-        home: ROLE_HOME[sample.role],
-        firestorePath: `users/${uid}`,
-      });
-    }
+    const results = await seedDevUsers();
 
     return res.status(200).json({
       ok: true,
       message:
-        "Sample users seeded in Firebase Auth and Firestore. Change passwords before production.",
+        "Dev users seeded in Firebase Auth and Firestore (idempotent).",
       count: results.length,
-      users: results,
+      users: results.map((r) => {
+        const seed = DEV_SEED_USERS.find((u) => u.email === r.email);
+        return {
+          action: r.action,
+          email: r.email,
+          password: seed?.password,
+          uid: r.uid,
+          role: r.role,
+          home: ROLE_HOME[r.role],
+          firestorePath: `users/${r.uid}`,
+        };
+      }),
     });
   } catch (err) {
     console.error("[seed-users]", err);
