@@ -29,6 +29,7 @@ import {
   DISPATCH_PLANTS,
   type MaterialVariance,
   type ReconciliationReport,
+  type UserRole,
 } from "@/lib/types";
 
 const NAVY = "#1e3a8a";
@@ -86,8 +87,13 @@ function varianceColorClass(pct: number): string {
   return "text-emerald-700";
 }
 
-export default function ReconciliationClient() {
-  const { role } = useAuth();
+export default function ReconciliationClient({
+  serverRole = null,
+}: {
+  serverRole?: UserRole | null;
+}) {
+  const { role: clientRole } = useAuth();
+  const role = clientRole ?? serverRole;
   const searchParams = useSearchParams();
   const canGenerate = role === "admin" || role === "plant_head";
   const canRead =
