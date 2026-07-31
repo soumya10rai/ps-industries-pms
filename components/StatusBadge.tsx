@@ -20,6 +20,11 @@ const STATUS_STYLES: Record<string, string> = {
   complete: "bg-ps-gray-100 text-ps-gray-800 ring-ps-gray-300",
   processing: "bg-sky-100 text-sky-900 ring-sky-300",
   failed: "bg-red-100 text-red-900 ring-red-300",
+  // Reconciliation statuses
+  healthy: "bg-emerald-100 text-emerald-900 ring-emerald-300",
+  attention: "bg-amber-100 text-amber-900 ring-amber-300",
+  alert: "bg-red-100 text-red-900 ring-red-300",
+  unmapped: "bg-ps-gray-100 text-ps-gray-700 ring-ps-gray-300",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -41,6 +46,10 @@ const STATUS_LABELS: Record<string, string> = {
   complete: "Complete",
   processing: "Processing",
   failed: "Failed",
+  healthy: "Healthy",
+  attention: "Attention",
+  alert: "Alert",
+  unmapped: "Unmapped",
 };
 
 interface StatusBadgeProps {

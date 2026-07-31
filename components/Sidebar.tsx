@@ -21,9 +21,15 @@ const MAIN_NAV: NavItem[] = [
   },
   {
     label: "Reconciliation",
-    href: "/plant-head/material-check",
-    icon: "check",
+    href: "/reconciliation",
+    icon: "chart",
     roles: ["admin", "plant_head"],
+  },
+  {
+    label: "Recon History",
+    href: "/reconciliation/history",
+    icon: "orders",
+    roles: ["admin", "plant_head", "store_manager", "production_head"],
   },
   {
     label: "PO List",
@@ -264,7 +270,8 @@ function isActive(pathname: string | null, href: string): boolean {
   if (
     href === "/dispatch" ||
     href === "/store/inventory" ||
-    href === "/accountant/po-list"
+    href === "/accountant/po-list" ||
+    href === "/reconciliation"
   ) {
     return pathname === href;
   }

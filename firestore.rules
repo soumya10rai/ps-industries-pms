@@ -111,5 +111,15 @@ service cloud.firestore {
       allow read: if canReadDispatch();
       allow write: if false;
     }
+
+    function canReadReconciliation() {
+      return isAdmin() || isPlantHead() || isStoreManager() || isProductionHead();
+    }
+
+    // Reconciliation reports — Admin SDK writes; approved ops roles may read.
+    match /reconciliation_reports/{id} {
+      allow read: if canReadReconciliation();
+      allow write: if false;
+    }
   }
 }

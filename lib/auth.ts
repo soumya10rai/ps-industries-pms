@@ -57,6 +57,7 @@ export function isJsonApiPath(pathname: string): boolean {
     pathname.startsWith("/api/admin") ||
     pathname.startsWith("/api/inventory") ||
     pathname.startsWith("/api/dispatch") ||
+    pathname.startsWith("/api/reconciliation") ||
     pathname.startsWith("/api/setup")
   );
 }
@@ -69,7 +70,8 @@ export function isProtectedDashboard(pathname: string): boolean {
     pathname.startsWith("/accountant") ||
     pathname.startsWith("/store") ||
     pathname.startsWith("/production") ||
-    pathname.startsWith("/dispatch")
+    pathname.startsWith("/dispatch") ||
+    pathname.startsWith("/reconciliation")
   );
 }
 

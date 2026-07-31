@@ -41,11 +41,23 @@ export const ROLE_ACCESS: Record<UserRole, string[]> = {
     "/store",
     "/production",
     "/dispatch",
+    "/reconciliation",
   ],
-  plant_head: ["/dashboard", "/plant-head", "/store", "/dispatch"],
+  plant_head: [
+    "/dashboard",
+    "/plant-head",
+    "/store",
+    "/dispatch",
+    "/reconciliation",
+  ],
   accountant: ["/dashboard", "/accountant", "/dispatch"],
-  store_manager: ["/dashboard", "/store", "/dispatch"],
-  production_head: ["/dashboard", "/production", "/dispatch"],
+  store_manager: ["/dashboard", "/store", "/dispatch", "/reconciliation"],
+  production_head: [
+    "/dashboard",
+    "/production",
+    "/dispatch",
+    "/reconciliation",
+  ],
 };
 
 export const ALLOWED_EMAIL_DOMAINS = [
@@ -335,6 +347,97 @@ export const DISPATCH_STATUS_LABELS: Record<DispatchLineStatus, string> = {
   shortfall: "Shortfall",
   excess: "Excess",
 };
+
+/** Variance status for material reconciliation. */
+export type ReconciliationStatus =
+  | "healthy"
+  | "attention"
+  | "alert"
+  | "unmapped";
+
+export type ReconciliationMode = "auto" | "manual";
+
+export interface DispatchContribution {
+  dispatchId: string;
+  itemCode: string;
+  itemDescription: string;
+  quantity: number;
+  weightGrams: number;
+  scrapPercent: number;
+  expectedKg: number;
+  plant: string;
+}
+
+export interface MovementContribution {
+  movementId: string;
+  date: string;
+  quantityKg: number;
+  type: string;
+  reason: string;
+  referenceId?: string;
+  plant: string;
+}
+
+export interface MaterialVariance {
+  materialCode: string;
+  materialName: string;
+  materialGroup: string;
+  expectedKg: number;
+  actualKg: number;
+  varianceKg: number;
+  variancePercent: number;
+  status: ReconciliationStatus;
+  dispatches: DispatchContribution[];
+  movements: MovementContribution[];
+  explanation: string;
+}
+
+export interface GroupVariance {
+  materialGroup: string;
+  expectedKg: number;
+  actualKg: number;
+  varianceKg: number;
+  variancePercent: number;
+  status: ReconciliationStatus;
+  materialCount: number;
+}
+
+export interface UnmappedDispatchItem {
+  dispatchId: string;
+  itemCode: string;
+  itemDescription: string;
+  quantity: number;
+  plant: string;
+  reason: string;
+}
+
+/** Firestore `/reconciliation_reports/{reportId}`. */
+export interface ReconciliationReport {
+  reportId: string;
+  periodStart: string;
+  periodEnd: string;
+  plant: string;
+  mode: ReconciliationMode;
+  generatedBy: string;
+  generatedByName?: string;
+  generatedAt: string;
+  totalExpectedKg: number;
+  totalActualKg: number;
+  totalVarianceKg: number;
+  totalVariancePercent: number;
+  materialsAnalyzed: number;
+  alertCount: number;
+  attentionCount: number;
+  healthyCount: number;
+  unmappedCount: number;
+  warnings: string[];
+  summary: {
+    byMaterial: MaterialVariance[];
+    byMaterialGroup: GroupVariance[];
+    topLosses: MaterialVariance[];
+    unmappedItems: UnmappedDispatchItem[];
+  };
+}
 
 export interface ProductionRun {
   id: string;
